@@ -63,12 +63,13 @@ class FFNN(nn.Module):
         super(FFNN, self).__init__()
         # WRITE CODE HERE
         self.flatten = nn.Flatten()
-        self.linear = nn.Linear(vocab_size, n_classes)
+        self.linear = nn.Sequential(
+            nn.Linear(vocab_size, n_classes)
+        )
 
     def forward(self, x):
         # WRITE CODE HERE
-        logits = F.log_softmax(self.linear(x), dim=1)
-        return logits
+        return F.log_softmax(self.linear(x), dim=1)
 
 
 # --- data loading ---
@@ -82,8 +83,6 @@ indices, vocab_size = generate_bow_representations(data)
 model = FFNN(vocab_size, N_CLASSES)  # add extra arguments here if you use
 loss_function = nn.NLLLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-
-vectors = {"negative": [1, 0, 0], "neutral": [0, 1, 0], "positive": [0, 0, 1]}
 
 # --- training ---
 for epoch in range(N_EPOCHS):
