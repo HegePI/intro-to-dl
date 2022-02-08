@@ -1,4 +1,7 @@
 """
+Heikki Pulli
+Markus Tervonen
+
    Introduction to Deep Learning (LDA-T3114)
    Skeleton Code for Assignment 1: Sentiment Classification on a Feed-Forward Neural Network
 
@@ -22,9 +25,9 @@ from paths import data_dir
 # --- hyperparameters ---
 
 N_CLASSES = len(LABEL_INDICES)
-N_EPOCHS = 10
-LEARNING_RATE = 0.05
-BATCH_SIZE = 1
+N_EPOCHS = 100
+LEARNING_RATE = 1
+BATCH_SIZE = 100
 REPORT_EVERY = 1
 IS_VERBOSE = True
 
@@ -64,7 +67,7 @@ class FFNN(nn.Module):
         # WRITE CODE HERE
         self.flatten = nn.Flatten()
         self.linear = nn.Sequential(
-            nn.Linear(vocab_size, n_classes)
+            nn.Linear(vocab_size, n_classes),
         )
 
     def forward(self, x):
@@ -82,7 +85,7 @@ indices, vocab_size = generate_bow_representations(data)
 # WRITE CODE HERE
 model = FFNN(vocab_size, N_CLASSES)  # add extra arguments here if you use
 loss_function = nn.NLLLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
 # --- training ---
 for epoch in range(N_EPOCHS):
@@ -94,13 +97,14 @@ for epoch in range(N_EPOCHS):
     for i in range(int(len(data['training'])/BATCH_SIZE)):
         minibatch = data['training'][i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
+        t1 = torch.stack([m['BOW'][0] for m in minibatch])
+        t2 = torch.tensor([label_to_idx(m['SENTIMENT']) for m in minibatch])
+
         model.zero_grad()
 
-        predicted_sentiment = model(minibatch[0]['BOW'])
+        predicted_sentiment = model(t1)
 
-        gold_class = label_to_idx(minibatch[0]['SENTIMENT'])
-
-        loss = loss_function(predicted_sentiment, gold_class)
+        loss = loss_function(predicted_sentiment, t2)
 
         loss.backward()
         optimizer.step()
@@ -116,7 +120,6 @@ for epoch in range(N_EPOCHS):
 correct = 0
 with torch.no_grad():
     for tweet in data['test.gold']:
-        print(tweet)
         gold_class = label_to_idx(tweet['SENTIMENT'])
 
         # WRITE CODE HERE
