@@ -49,20 +49,24 @@ test_loader = torch.utils.data.DataLoader(
 class CNN(nn.Module):
     def __init__(self, num_classes=NUM_CLASSES):
         super(CNN, self).__init__()
-        self.flatten = nn.Flatten()
-        self.linear = nn.Sequential(
-            nn.Conv2d(3, 34, kernel_size=3, stride=1, padding=1),
-            nn.MaxPool2d(2),
-            nn.Sigmoid(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.Sigmoid(),
-            nn.MaxPool2d(2),
-            nn.Linear(10, num_classes)
-        )
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=5, padding=2),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2))
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(16, 32, kernel_size=5, padding=2),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2))
+        self.fc = nn.Linear(7*7*32, num_classes)
 
     def forward(self, x):
-        # WRITE CODE HERE
-        return F.log_softmax(self.linear(x), dim=1)
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = out.view(out.size(0), -1)
+        out = self.fc(out)
+        return F.log_softmax(out, dim=1)
 
 
 # --- set up ---
@@ -79,26 +83,28 @@ optimizer = torch.optim.SGD(model.parameters(), lr=LR)
 
 # --- training ---
 for epoch in range(N_EPOCHS):
+    losses = []
     train_loss = 0
     train_correct = 0
     total = 0
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        # WRITE CODE HERE
-
         optimizer.zero_grad()
 
-        predicted_label = model(data)
+        out = model(data)
 
-        loss = loss_function(predicted_label, target)
+        loss = loss_function(out, target)
+
+        losses.append(loss.item())
 
         loss.backward()
 
         optimizer.step()
+        _, predicted = torch.max(out, 1)
 
-        train_loss += loss
-        train_correct += 1 - loss
-        total += 1
+        train_loss = loss
+        train_correct = (predicted == target).sum()
+        total = target.sum()
 
         print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' %
               (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1),
@@ -118,11 +124,11 @@ total = 0
 with torch.no_grad():
     for batch_num, (data, target) in enumerate(test_loader):
         data, target = data.to(device), target.to(device)
-        # WRITE CODE HERE
 
-        loss = loss_function(model.forward())
-
-        total += loss
+        out = model(data)
+        _, predicted = torch.max(out.data, 1)
+        total += target.sum()
+        test_correct += (predicted == target).sum()
 
         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' %
               (batch_num, len(test_loader), test_loss / (batch_num + 1),
