@@ -83,28 +83,26 @@ optimizer = torch.optim.SGD(model.parameters(), lr=LR)
 
 # --- training ---
 for epoch in range(N_EPOCHS):
-    losses = []
     train_loss = 0
     train_correct = 0
     total = 0
+
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
 
         out = model(data)
-
         loss = loss_function(out, target)
-
-        losses.append(loss.item())
-
-        loss.backward()
-
-        optimizer.step()
         _, predicted = torch.max(out, 1)
 
-        train_loss = loss
-        train_correct = (predicted == target).sum()
-        total = target.sum()
+        loss.backward()
+        optimizer.step()
+
+        corr = (predicted == target).sum().item()/target.size()[0]
+
+        train_loss = loss.item()
+        train_correct += corr
+        total += 1
 
         print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' %
               (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1),
