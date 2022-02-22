@@ -10,9 +10,10 @@ import numpy as np
 
 
 # --- hyperparameters ---
-N_EPOCHS = 10
+N_EPOCHS = 15
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
+BATCH_SIZE_DEV = 100
 LR = 0.01
 
 
@@ -42,7 +43,9 @@ test_set = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 train_loader = torch.utils.data.DataLoader(
     dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 test_loader = torch.utils.data.DataLoader(
-    dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
+    dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
+dev_loader = torch.utils.data.DataLoader(
+    dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
 
 
 # --- model ---
@@ -53,12 +56,17 @@ class CNN(nn.Module):
             nn.Conv2d(3, 16, kernel_size=5, padding=2),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.MaxPool2d(2))
+            nn.MaxPool2d(2),
+            # nn.Dropout2d(0.3))
+        )
+
         self.layer2 = nn.Sequential(
             nn.Conv2d(16, 32, kernel_size=5, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.MaxPool2d(2))
+            nn.MaxPool2d(2),
+            # nn.Dropout2d(0.3))
+        )
         self.fc = nn.Linear(7*7*32, num_classes)
 
     def forward(self, x):
@@ -77,15 +85,22 @@ else:
 
 model = CNN().to(device)
 
+
 # WRITE CODE HERE
 loss_function = nn.NLLLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=LR)
+# optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
 # --- training ---
 for epoch in range(N_EPOCHS):
     train_loss = 0
     train_correct = 0
     total = 0
+
+    best_score = None
+    patience = 7
+    counter = 0
+    delta = 0.005
 
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -108,11 +123,17 @@ for epoch in range(N_EPOCHS):
               (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1),
                100. * train_correct / total, train_correct, total))
 
-    # WRITE CODE HERE
-    # Please implement early stopping here.
-    # You can try different versions, simplest way is to calculate the dev error and
-    # compare this with the previous dev error, stopping if the error has grown.
-
+        score = -loss
+        if best_score is None:
+            best_score = score
+        elif score < best_score + delta:
+            counter += 1
+            if counter >= patience:
+                break
+        # WRITE CODE HERE
+        # Please implement early stopping here.
+        # You can try different versions, simplest way is to calculate the dev error and
+        # compare this with the previous dev error, stopping if the error has grown.
 
 # --- test ---
 test_loss = 0
@@ -124,9 +145,12 @@ with torch.no_grad():
         data, target = data.to(device), target.to(device)
 
         out = model(data)
+        loss = loss_function(out, target)
         _, predicted = torch.max(out.data, 1)
-        total += target.sum()
-        test_correct += (predicted == target).sum()
+
+        total += 1
+        test_correct += (predicted == target).sum().item()/target.size()[0]
+        test_loss = loss.item()
 
         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' %
               (batch_num, len(test_loader), test_loss / (batch_num + 1),
