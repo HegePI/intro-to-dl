@@ -87,9 +87,13 @@ model = CNN().to(device)
 
 
 # WRITE CODE HERE
+# L2-norm can be implemented with weight decay parameter
 loss_function = nn.NLLLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=LR)
+optimizer = torch.optim.RMSprop(model.parameters(), lr=LR)
+# optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=1e-5)
 # optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+lambda1 = .5
 
 # --- training ---
 for epoch in range(N_EPOCHS):
@@ -109,6 +113,13 @@ for epoch in range(N_EPOCHS):
         out = model(data)
         loss = loss_function(out, target)
         _, predicted = torch.max(out, 1)
+
+        # L1-norm implementation
+        # all_linear1_params = torch.cat(
+        #     [x.view(-1) for x in model.layer1.parameters()])
+        # l1_regularization = lambda1 * torch.norm(all_linear1_params, 1)
+
+        # loss += l1_regularization
 
         loss.backward()
         optimizer.step()
@@ -155,3 +166,14 @@ with torch.no_grad():
         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' %
               (batch_num, len(test_loader), test_loss / (batch_num + 1),
                100. * test_correct / total, test_correct, total))
+
+
+# Optimizers
+# SGD - 90%
+# Adam - 80%
+# RMSProp - 85%
+
+# Regularization schemes
+# L1-norm - 1% increase
+# L2-norm - 5% increase
+# dropout - 10% decrease
