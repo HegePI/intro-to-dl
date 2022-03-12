@@ -7,6 +7,10 @@ from torchvision import transforms, datasets
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import math
+import os
+
+import news_dataset
 
 # Hyperparameters
 N_EPOCHS = 15
@@ -18,7 +22,21 @@ LR = 0.01
 
 # --- fixed constants ---
 NUM_CLASSES = 24
-DATA_DIR = '../data/sign_mnist_%s'
+DATA_DIR = "final-project/data"
+TOPICS = "final-project/topic_codes.txt"
+
+data = news_dataset.newsDataset(DATA_DIR, TOPICS)
+
+train_data, test_data = torch.utils.data.random_split(
+    data, [math.floor(len(data)*(2/3)), math.ceil(len(data)*(1/3))])
+
+
+# Create Pytorch data loaders
+train_data_loader = torch.utils.data.DataLoader(
+    dataset=train_data, shuffle=True)
+
+test_data_loader = train_data_loader = torch.utils.data.DataLoader(
+    dataset=test_data, shuffle=True)
 
 
 class Model(nn.Module):
@@ -59,3 +77,6 @@ model = Model().to(device)
 
 loss_function = nn.NLLLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+for batch_num, (data, target) in enumerate(train_data_loader):
+    print(data)
