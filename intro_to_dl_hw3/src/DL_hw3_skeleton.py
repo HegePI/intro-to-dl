@@ -31,7 +31,8 @@ LR = 1
 
 
 # Auxilary functions for data preparation
-tok = spacy.load('en_core_web_sm', disable=['parser', 'tagger', 'ner'])
+tok = spacy.load('en_core_web_sm', disable=[
+                 'parser', 'tagger', 'ner', 'lemmatizer'])
 
 
 def tokenizer(s):
@@ -128,7 +129,7 @@ if __name__ == '__main__':
                                                                            skip_header=False)
 
     txt_field.build_vocab(train_data, dev_data, max_size=100000,
-                          vectors='glove.twitter.27B.200d', unk_init=torch.Tensor.normal_)
+                          vectors='glove.twitter.27B.25d', unk_init=torch.Tensor.normal_)
     label_field.build_vocab(train_data)
 
     train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train_data, dev_data, test_data),
