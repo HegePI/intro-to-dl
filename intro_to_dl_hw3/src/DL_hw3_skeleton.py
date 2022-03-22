@@ -25,7 +25,7 @@ import time
 N_EPOCHS = 5
 EMBEDDING_DIM = 200
 LSTM_HIDDEN_DIM = 200
-NUM_EMBEDDINGS = 30116
+NUM_EMBEDDINGS = 30_116
 OUTPUT_DIM = 2
 LR = 1
 
@@ -40,7 +40,7 @@ def tokenizer(s):
 
 
 def tweet_clean(text):
-    # remove non alphanumeric character
+    '''remove non alphanumeric character'''
     text = re.sub(r'[^A-Za-z0-9]+', ' ', text)
     text = re.sub(r'https?:/\/\S+', ' ', text)  # remove links
     return text.strip()
@@ -81,22 +81,30 @@ def epoch_time(start_time, end_time):
 
 # Recurrent Network
 class RNN(nn.Module):
-    def __init__(self):
+    def __init__(self, vocab_size):
         super(RNN, self).__init__()
         # WRITE CODE HERE
         self.embedding = nn.Embedding(
-            num_embeddings=NUM_EMBEDDINGS, embedding_dim=EMBEDDING_DIM, padding_idx=0),
+            num_embeddings=vocab_size, embedding_dim=EMBEDDING_DIM, padding_idx=0),
         self.lstm = nn.LSTM(EMBEDDING_DIM, LSTM_HIDDEN_DIM),
-        self.l = nn.Linear(in_features=LSTM_HIDDEN_DIM,
-                           out_features=OUTPUT_DIM)
+        self.linear = nn.Linear(in_features=LSTM_HIDDEN_DIM,
+                                out_features=OUTPUT_DIM)
 
-    def forward(self, input):
+    def forward(self, seqs, seqs_lens):
         # WRITE CODE HERE
-        input = self.embedding[0](input)
-        out, (h_n, c_n) = self.lstm[0](input)
-        print(h_n, c_n)
-        input = self.l(out)
-        return F.log_softmax(input, dim=1)
+        embedding_output = self.embedding[0](seqs)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(
+            embedding_output, seqs_lens)
+        lstm_output, (_, _) = self.lstm[0](packed_embedded)
+        output, _ = nn.utils.rnn.pad_packed_sequence(lstm_output)
+
+        max_pool = F.adaptive_max_pool1d(
+            output.permute(1, 2, 0), 1).view(seqs.size(1), -1)
+        linear_output = self.linear(torch.cat([max_pool], dim=1))
+
+        soft_max = F.log_softmax(linear_output, dim=-1)
+
+        return soft_max
 
 
 if __name__ == '__main__':
@@ -110,6 +118,7 @@ if __name__ == '__main__':
                                      tokenize=tokenizer,
                                      include_lengths=True,
                                      use_vocab=True)
+
     label_field = torchtext.data.Field(sequential=False,
                                        use_vocab=False)
 
@@ -132,6 +141,7 @@ if __name__ == '__main__':
 
     txt_field.build_vocab(train_data, dev_data, max_size=100000,
                           vectors='glove.twitter.27B.200d', unk_init=torch.Tensor.normal_)
+
     label_field.build_vocab(train_data)
 
     train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train_data, dev_data, test_data),
@@ -144,13 +154,15 @@ if __name__ == '__main__':
                                                                            sort_within_batch=True,
                                                                            repeat=False)
 
+    print(txt_field.vocab)
+
     # --- Model, Loss, Optimizer Initialization ---
 
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
     UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
     # WRITE CODE HERE
-    model = RNN()
+    model = RNN(len(txt_field.vocab))
 
     # Copy the pretrained embeddings into the model
     pretrained_embeddings = txt_field.vocab.vectors
@@ -176,21 +188,24 @@ if __name__ == '__main__':
         model.train()
 
         for batch in train_iter:
-            with torch.set_grad_enabled(True):
-                data = batch.TweetText[0]
-                target = batch.Label
 
-                # WRITE CODE HERE
-                out = model(data)
-                print(out)
-                loss = criterion(out, target)
-                loss.backward()
-                optimizer.step()
+            optimizer.zero_grad()
 
-                epoch_loss += loss
-                if out == target:
-                    epoch_acc += 1
-                pass
+            seqs, seqs_lens = batch.TweetText
+            target = batch.Label
+
+            # WRITE CODE HERE
+            out = model(seqs, seqs_lens)
+
+            loss = criterion(out, target)
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss
+
+            max_values = torch.max(out, dim=1).values
+            corr = (max_values == target).sum().item()/target.size()[0]
+            epoch_acc += corr
 
         train_loss, train_acc = (
             epoch_loss / len(train_iter), epoch_acc / len(train_iter))
