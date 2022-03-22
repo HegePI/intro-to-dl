@@ -24,8 +24,8 @@ import time
 # Constants - Add here as you wish
 N_EPOCHS = 5
 EMBEDDING_DIM = 200
-LSTM_HIDDEN_DIM = 32
-NUM_EMBEDDINGS = 27000000000
+LSTM_HIDDEN_DIM = 200
+NUM_EMBEDDINGS = 30116
 OUTPUT_DIM = 2
 LR = 1
 
@@ -82,19 +82,21 @@ def epoch_time(start_time, end_time):
 # Recurrent Network
 class RNN(nn.Module):
     def __init__(self):
-        super().__init__()
+        super(RNN, self).__init__()
         # WRITE CODE HERE
         self.embedding = nn.Embedding(
-            num_embeddings=NUM_EMBEDDINGS, embedding_dim=EMBEDDING_DIM),
+            num_embeddings=NUM_EMBEDDINGS, embedding_dim=EMBEDDING_DIM, padding_idx=0),
         self.lstm = nn.LSTM(EMBEDDING_DIM, LSTM_HIDDEN_DIM),
-        self.l = nn.Linear(in_features=EMBEDDING_DIM, out_features=OUTPUT_DIM)
+        self.l = nn.Linear(in_features=LSTM_HIDDEN_DIM,
+                           out_features=OUTPUT_DIM)
 
-    def forward(self, x):
+    def forward(self, input):
         # WRITE CODE HERE
-        x = self.embedding(x)
-        x, (_, _) = self.lstm(x)
-        x = self.l(x)
-        return F.log_softmax(x, dim=1)
+        input = self.embedding[0](input)
+        out, (h_n, c_n) = self.lstm[0](input)
+        print(h_n, c_n)
+        input = self.l(out)
+        return F.log_softmax(input, dim=1)
 
 
 if __name__ == '__main__':
@@ -120,7 +122,7 @@ if __name__ == '__main__':
         ('TweetText', txt_field)  # process it as text field
     ]
 
-    train_data, dev_data, test_data = torchtext.data.TabularDataset.splits(path='../data',
+    train_data, dev_data, test_data = torchtext.data.TabularDataset.splits(path='/home/heikki/koulu/intro-to-dl/intro_to_dl_hw3/data',
                                                                            format='csv',
                                                                            train='sent140.train.mini.csv',
                                                                            validation='sent140.dev.csv',
@@ -129,7 +131,7 @@ if __name__ == '__main__':
                                                                            skip_header=False)
 
     txt_field.build_vocab(train_data, dev_data, max_size=100000,
-                          vectors='glove.twitter.27B.25d', unk_init=torch.Tensor.normal_)
+                          vectors='glove.twitter.27B.200d', unk_init=torch.Tensor.normal_)
     label_field.build_vocab(train_data)
 
     train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train_data, dev_data, test_data),
@@ -152,11 +154,11 @@ if __name__ == '__main__':
 
     # Copy the pretrained embeddings into the model
     pretrained_embeddings = txt_field.vocab.vectors
-    model.embedding.weight.data.copy_(pretrained_embeddings)
+    model.embedding[0].weight.data.copy_(pretrained_embeddings)
 
     # Fix the <UNK> and <PAD> tokens in the embedding layer
-    model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
-    model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
+    model.embedding[0].weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
+    model.embedding[0].weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
     # WRITE CODE HERE
     optimizer = optim.SGD(model.parameters(), lr=LR)
@@ -175,12 +177,13 @@ if __name__ == '__main__':
 
         for batch in train_iter:
             with torch.set_grad_enabled(True):
-                data = batch[0]
-                target = batch[1]
+                data = batch.TweetText[0]
+                target = batch.Label
 
                 # WRITE CODE HERE
                 out = model(data)
-                loss = criterion(out)
+                print(out)
+                loss = criterion(out, target)
                 loss.backward()
                 optimizer.step()
 
