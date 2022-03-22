@@ -172,3 +172,5 @@ cython_debug/
 */data
 */REUTERS_CORPUS_2
 */reuters-training-corpus.zip
+
+**/.vector_cache
