@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Heikki Pulli, Markus Tervonen
+
 """
    Introduction to Deep Learning
    Assignment 3: Sentiment Classification of Tweets on a Recurrent Neural Network using Pretrained Embeddings
