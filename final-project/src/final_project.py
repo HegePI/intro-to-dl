@@ -1,16 +1,10 @@
 import torch
-import torch.optim as optim
-import torch.utils.data
-import torch.backends.cudnn as cudnn
-import torchvision
-from torchvision import transforms, datasets
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
+import torchtext
+
 import math
-import os
 
 import news_dataset
+import model
 
 # Hyperparameters
 N_EPOCHS = 15
@@ -22,61 +16,80 @@ LR = 0.01
 
 # --- fixed constants ---
 NUM_CLASSES = 24
+EMBEDDING_DIM = 200
+LSTM_HIDDEN_DIM = 200
 DATA_DIR = "final-project/data"
 TOPICS = "final-project/topic_codes.txt"
 
-data = news_dataset.newsDataset(DATA_DIR, TOPICS)
 
-train_data, test_data = torch.utils.data.random_split(
-    data, [math.floor(len(data)*(2/3)), math.ceil(len(data)*(1/3))])
+if __name__ == '__main__':
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+    data = news_dataset.newsDataset(DATA_DIR, TOPICS)
 
-# Create Pytorch data loaders
-train_data_loader = torch.utils.data.DataLoader(
-    dataset=train_data, shuffle=True)
+    train = math.floor(len(data)*(4/5))
+    test = math.floor((len(data)-train)/2)
+    dev = math.ceil((len(data)-train)/2)
 
-test_data_loader = train_data_loader = torch.utils.data.DataLoader(
-    dataset=test_data, shuffle=True)
+    train_data, test_data, dev_data = torch.utils.data.random_split(
+        dataset=data, lengths=[train, test, dev])
 
+    txt_field = torchtext.data.Field(
+        sequential=True,
+        use_vocab=True,
+        include_lengths=True
+    )
 
-class Model(nn.Module):
-    def __init__(self, num_classes=NUM_CLASSES):
-        super(Model, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=5, padding=2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-        )
+    label_field = torchtext.data.Field(
+        sequential=True,
+        use_vocab=False
+    )
 
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=5, padding=2),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-        )
-        self.fc = nn.Linear(7*7*32, num_classes)
+    txt_field.build_vocab(
+        train_data,
+        dev_data,
+        max_size=10_000,
+        vectors="glove.twitter.27B.200d",
+        unk_init=torch.Tensor.normal_
+    )
+    print(train_data)
+    label_field.build_vocab(
+        train_data
+    )
 
-    def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc(out)
-        return F.log_softmax(out, dim=1)
+    train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(
+        datasets=(train_data, dev_data, test_data),
+        batch_sizes=(BATCH_SIZE_TRAIN, BATCH_SIZE_DEV, BATCH_SIZE_TEST),
+        sort_key=lambda x: len(x),
+        device=device,
+        sort_within_batch=True,
+        repeat=False
+    )
 
+    PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
+    UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
-# --- set up ---
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
+    lstm_model = model.Model(
+        vocab_size=len(txt_field.vocab),
+        embedding_dim=EMBEDDING_DIM,
+        lstm_hidden_dim=LSTM_HIDDEN_DIM,
+        num_classes=NUM_CLASSES
+    )
 
-model = Model().to(device)
+    pretrained_embeddings = txt_field.vocab.vectors
+    lstm_model.embedding.weight.data.copy_(pretrained_embeddings)
 
-# WRITE CODE HERE
+    # Fix the <UNK> and <PAD> tokens in the embedding layer
+    lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
+    lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
-loss_function = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
 
-for batch_num, (data, target) in enumerate(train_data_loader):
-    print(data)
+    loss_function = torch.nn.NLLLoss()
+    optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
+
+    for batch_num, (data, target) in train_iter:
+        print(data)

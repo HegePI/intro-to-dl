@@ -1,10 +1,15 @@
-from pathlib import Path
-from typing import Tuple
-import xml.etree.ElementTree as ET
-from torch.utils.data import Dataset
+import pathlib
+import typing
+import xml
+import torch
 
 
-class newsDataset(Dataset):
+class newsDataset(torch.utils.data.Dataset):
+    '''
+    Custom dataset for news data.\n
+    It counts and preprocesses news data.\n
+    NewsDataset class can be passed to dataloader to make it easier to fetch the data.\n
+    '''
 
     def __init__(self, path: str, codes: str):
         self.path = path
@@ -17,7 +22,7 @@ class newsDataset(Dataset):
                     code_and_meaning[parts[0].strip()] = parts[1].strip()
 
         # store .xml file paths into list for faster lookup
-        files = list(Path(self.path).glob("**/*.xml"))
+        files = list(pathlib.Path(self.path).glob("**/*.xml"))
 
         self.files = files
         self.number_of_files = len(files)
@@ -26,11 +31,11 @@ class newsDataset(Dataset):
     def __len__(self):
         return self.number_of_files
 
-    def __getitem__(self, idx: int) -> Tuple[str, list[str]]:
+    def __getitem__(self, idx: int) -> typing.Tuple[str, list[str]]:
 
         f = self.files[idx]
 
-        tree = ET.parse(f)
+        tree = xml.etree.ElementTree.parse(f)
 
         text = "\n".join(list(map(lambda x: x.text, tree.findall("text/p"))))
 
