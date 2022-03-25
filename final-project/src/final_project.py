@@ -52,7 +52,7 @@ if __name__ == '__main__':
         vectors="glove.twitter.27B.200d",
         unk_init=torch.Tensor.normal_
     )
-    print(train_data)
+
     label_field.build_vocab(
         train_data
     )
