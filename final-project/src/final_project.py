@@ -22,40 +22,34 @@ DATA_DIR = "final-project/data"
 TOPICS = "final-project/topic_codes.txt"
 
 
-if __name__ == '__main__':
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+if __name__ == "__main__":
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     data = news_dataset.newsDataset(DATA_DIR, TOPICS)
 
-    train = math.floor(len(data)*(4/5))
-    test = math.floor((len(data)-train)/2)
-    dev = math.ceil((len(data)-train)/2)
+    train = math.floor(len(data) * (4 / 5))
+    test = math.floor((len(data) - train) / 2)
+    dev = math.ceil((len(data) - train) / 2)
 
     train_data, test_data, dev_data = torch.utils.data.random_split(
-        dataset=data, lengths=[train, test, dev])
+        dataset=data, lengths=[train, test, dev]
+    )
 
     txt_field = torchtext.data.Field(
-        sequential=True,
-        use_vocab=True,
-        include_lengths=True
+        sequential=True, use_vocab=True, include_lengths=True
     )
 
-    label_field = torchtext.data.Field(
-        sequential=True,
-        use_vocab=False
-    )
+    label_field = torchtext.data.Field(sequential=True, use_vocab=False)
 
     txt_field.build_vocab(
         train_data,
         dev_data,
         max_size=10_000,
         vectors="glove.twitter.27B.200d",
-        unk_init=torch.Tensor.normal_
+        unk_init=torch.Tensor.normal_,
     )
 
-    label_field.build_vocab(
-        train_data
-    )
+    label_field.build_vocab(train_data)
 
     train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
@@ -63,7 +57,7 @@ if __name__ == '__main__':
         sort_key=lambda x: len(x),
         device=device,
         sort_within_batch=True,
-        repeat=False
+        repeat=False,
     )
 
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
@@ -73,7 +67,7 @@ if __name__ == '__main__':
         vocab_size=len(txt_field.vocab),
         embedding_dim=EMBEDDING_DIM,
         lstm_hidden_dim=LSTM_HIDDEN_DIM,
-        num_classes=NUM_CLASSES
+        num_classes=NUM_CLASSES,
     )
 
     pretrained_embeddings = txt_field.vocab.vectors
@@ -84,9 +78,9 @@ if __name__ == '__main__':
     lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
     if torch.cuda.is_available():
-        device = torch.device('cuda')
+        device = torch.device("cuda")
     else:
-        device = torch.device('cpu')
+        device = torch.device("cpu")
 
     loss_function = torch.nn.NLLLoss()
     optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
