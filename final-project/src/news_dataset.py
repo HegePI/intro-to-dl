@@ -1,10 +1,26 @@
-import pathlib
-import typing
-import xml
-import torch
+from pathlib import Path
+from typing import Tuple
+import xml.etree.ElementTree as ET
+from torch.utils.data import Dataset
+import spacy
+import re
 
+tok = spacy.load('en_core_web_sm', disable=[
+                 'parser', 'tagger', 'ner', 'lemmatizer'])
 
-class newsDataset(torch.utils.data.Dataset):
+def tokenizer(s):
+    return [w.text.lower() for w in tok(tweet_clean(s))]
+
+def tweet_clean(text):
+    '''remove non alphanumeric character'''
+    text = re.sub(r'[^A-Za-z0-9]+', ' ', text)
+    text = re.sub(r'https?:/\/\S+', ' ', text)  # remove links
+    text = re.sub(r'www?:/\/\S+', ' ', text)  # remove links with www
+    # Add more cleaning options !
+    
+    return text.strip()
+
+class newsDataset(Dataset):
     """
     Custom dataset for news data.\n
     It counts and preprocesses news data.\n
@@ -22,7 +38,7 @@ class newsDataset(torch.utils.data.Dataset):
                     code_and_meaning[parts[0].strip()] = parts[1].strip()
 
         # store .xml file paths into list for faster lookup
-        files = list(pathlib.Path(self.path).glob("**/*.xml"))
+        files = list(Path(self.path).glob("**/*.xml"))
 
         self.files = files
         self.number_of_files = len(files)
@@ -31,13 +47,14 @@ class newsDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.number_of_files
 
-    def __getitem__(self, idx: int) -> typing.Tuple[str, list[str]]:
+    def __getitem__(self, idx: int) -> Tuple[str, list[str]]:
 
         f = self.files[idx]
 
-        tree = xml.etree.ElementTree.parse(f)
+        tree = ET.parse(f)
 
         text = "\n".join(list(map(lambda x: x.text, tree.findall("text/p"))))
+        text = tokenizer(text)
 
         codes_in_xml = [
             item
