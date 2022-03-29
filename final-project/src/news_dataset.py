@@ -5,20 +5,22 @@ from torch.utils.data import Dataset
 import spacy
 import re
 
-tok = spacy.load('en_core_web_sm', disable=[
-                 'parser', 'tagger', 'ner', 'lemmatizer'])
+tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
+
 
 def tokenizer(s):
     return [w.text.lower() for w in tok(tweet_clean(s))]
 
+
 def tweet_clean(text):
-    '''remove non alphanumeric character'''
-    text = re.sub(r'[^A-Za-z0-9]+', ' ', text)
-    text = re.sub(r'https?:/\/\S+', ' ', text)  # remove links
-    text = re.sub(r'www?:/\/\S+', ' ', text)  # remove links with www
+    """remove non alphanumeric character"""
+    text = re.sub(r"[^A-Za-z0-9]+", " ", text)
+    text = re.sub(r"https?:/\/\S+", " ", text)  # remove links
+    text = re.sub(r"www?:/\/\S+", " ", text)  # remove links with www
     # Add more cleaning options !
-    
+
     return text.strip()
+
 
 class newsDataset(Dataset):
     """

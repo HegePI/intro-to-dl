@@ -1,6 +1,8 @@
 import torch
 import torchtext
 
+from torchtext.legacy.data import Field
+
 import math
 
 import news_dataset
@@ -16,7 +18,8 @@ LR = 0.01
 
 # --- fixed constants ---
 NUM_CLASSES = 24
-EMBEDDING_DIM = 200
+# Possible embedding dims: 50, 100, 200
+EMBEDDING_DIM = 50
 LSTM_HIDDEN_DIM = 200
 DATA_DIR = "final-project/data"
 TOPICS = "final-project/topic_codes.txt"
@@ -35,23 +38,21 @@ if __name__ == "__main__":
         dataset=data, lengths=[train, test, dev]
     )
 
-    txt_field = torchtext.data.Field(
-        sequential=True, use_vocab=True, include_lengths=True
-    )
+    txt_field = Field(sequential=True, use_vocab=True, include_lengths=True)
 
-    label_field = torchtext.data.Field(sequential=True, use_vocab=False)
+    label_field = Field(sequential=True, use_vocab=False)
 
     txt_field.build_vocab(
         train_data,
         dev_data,
-        max_size=10_000,
-        vectors="glove.twitter.27B.200d",
+        max_size=100_000,
+        vectors=f"glove.6B.{EMBEDDING_DIM}d",
         unk_init=torch.Tensor.normal_,
     )
 
     label_field.build_vocab(train_data)
 
-    train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(
+    train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
         batch_sizes=(BATCH_SIZE_TRAIN, BATCH_SIZE_DEV, BATCH_SIZE_TEST),
         sort_key=lambda x: len(x),
