@@ -1,7 +1,8 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Tuple
 import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
+from torchtext.legacy.data import Field
 import spacy
 import re
 
@@ -49,7 +50,7 @@ class newsDataset(Dataset):
     def __len__(self):
         return self.number_of_files
 
-    def __getitem__(self, idx: int) -> Tuple[str, list[str]]:
+    def __getitem__(self, idx: int):
 
         f = self.files[idx]
 

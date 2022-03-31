@@ -7,6 +7,7 @@ import math
 
 import news_dataset
 import model
+import xml_to_tsv
 
 # Hyperparameters
 N_EPOCHS = 15
@@ -28,12 +29,21 @@ TOPICS = "final-project/topic_codes.txt"
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    data_processor = xml_to_tsv.XmlToTsv(DATA_DIR, TOPICS)
+
+    train_tsv, dev_tsv, test_tsv = data_processor.write_data_to_tsv_files(
+        tsv_sizes=[7 / 10, 2 / 10, 1 / 10]
+    )
+
+    # Todo: not needed, tabulardataset will replace
     data = news_dataset.newsDataset(DATA_DIR, TOPICS)
 
+    # Todo: not needed, tabulardataset will replace
     train = math.floor(len(data) * (4 / 5))
     test = math.floor((len(data) - train) / 2)
     dev = math.ceil((len(data) - train) / 2)
 
+    # Todo: not needed, tabulardataset will replace
     train_data, test_data, dev_data = torch.utils.data.random_split(
         dataset=data, lengths=[train, test, dev]
     )
@@ -55,7 +65,7 @@ if __name__ == "__main__":
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
         batch_sizes=(BATCH_SIZE_TRAIN, BATCH_SIZE_DEV, BATCH_SIZE_TEST),
-        sort_key=lambda x: len(x),
+        sort_key=lambda x: len(x[0]),
         device=device,
         sort_within_batch=True,
         repeat=False,
@@ -86,5 +96,5 @@ if __name__ == "__main__":
     loss_function = torch.nn.NLLLoss()
     optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
 
-    for batch_num, (data, target) in train_iter:
+    for item in train_iter:
         print(data)
