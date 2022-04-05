@@ -1,13 +1,15 @@
 from calendar import EPOCH
 import re
+import numpy as np
 import spacy
 import torch
 import torchtext
 
 from torchtext.legacy.data import Field
+from torchtext.legacy.data import Pipeline
 
 import model
-import xml_to_tsv
+import xml_to_csv
 
 # Hyperparameters
 N_EPOCHS = 15
@@ -30,6 +32,17 @@ TOPICS = "final-project/topic_codes.txt"
 tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
 
 
+def labels_to_one_hot(labels: list[str], codes: list[str]) -> list[int]:
+    one_hot = np.zeros(len(codes))
+    for label in labels:
+        label_one_hot = np.zeros(len(codes))
+        label_idx = codes.index(label)
+        label_one_hot[label_idx] = 1
+        one_hot = one_hot + label_one_hot
+
+    return one_hot.tolist()
+
+
 def tokenizer(s):
     return [w.text.lower() for w in tok(tweet_clean(s))]
 
@@ -45,27 +58,33 @@ def tweet_clean(text):
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    data_processor = xml_to_tsv.XmlToTsv(DATA_DIR, TOPICS)
+    data_processor = xml_to_csv.XmlToCsvWriter(DATA_DIR, TOPICS)
 
-    train_tsv, dev_tsv, test_tsv = data_processor.write_data_to_tsv_files(
-        tsv_sizes=[7 / 10, 2 / 10, 1 / 10]
+    codes = data_processor.get_codes()
+
+    train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
+        csv_sizes=[7 / 10, 2 / 10, 1 / 10]
     )
 
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
     )
 
-    label_field = Field(sequential=False, use_vocab=True)
+    label_field = Field(
+        sequential=False,
+        use_vocab=False,
+        preprocessing=Pipeline(lambda x: labels_to_one_hot(x.split(), codes)),
+    )
 
-    tsv_fields = [("NewsText", txt_field), ("Labels", label_field)]
+    csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
 
     train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
         path="/home/heikki/koulu/intro-to-dl/final-project/data",
-        format="tsv",
-        train="train.tsv",
-        validation="dev.tsv",
-        test="test.tsv",
-        fields=tsv_fields,
+        format="csv",
+        train="train.csv",
+        validation="dev.csv",
+        test="test.csv",
+        fields=csv_fields,
         skip_header=False,
     )
 
@@ -78,12 +97,6 @@ if __name__ == "__main__":
     )
 
     label_field.build_vocab(train_data)
-
-    # torch.save(txt_field, "txt_field.pth")  # Save the vocab object for ease of use
-    # torch.save(label_field, 'label_field.pth')
-
-    # txt_field = torch.load("txt_field.pth")  # Load the vocab objects into variables
-    # label_field = torch.load('label_field.pth')
 
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
