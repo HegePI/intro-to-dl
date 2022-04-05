@@ -1,11 +1,11 @@
+from calendar import EPOCH
+import re
+import spacy
 import torch
 import torchtext
 
 from torchtext.legacy.data import Field
 
-import math
-
-import news_dataset
 import model
 import xml_to_tsv
 
@@ -18,12 +18,28 @@ LR = 0.01
 
 
 # --- fixed constants ---
-NUM_CLASSES = 24
+NUM_CLASSES = 126
 # Possible embedding dims: 50, 100, 200
 EMBEDDING_DIM = 50
 LSTM_HIDDEN_DIM = 200
 DATA_DIR = "final-project/data"
 TOPICS = "final-project/topic_codes.txt"
+
+
+# Auxilary functions for data preparation
+tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
+
+
+def tokenizer(s):
+    return [w.text.lower() for w in tok(tweet_clean(s))]
+
+
+def tweet_clean(text):
+    """remove non alphanumeric character"""
+    text = re.sub(r"[^A-Za-z0-9]+", " ", text)
+    text = re.sub(r"https?:/\/\S+", " ", text)  # remove links
+    text = re.sub(r"www?:/\/\S+", " ", text)
+    return text.strip()
 
 
 if __name__ == "__main__":
@@ -35,22 +51,23 @@ if __name__ == "__main__":
         tsv_sizes=[7 / 10, 2 / 10, 1 / 10]
     )
 
-    # Todo: not needed, tabulardataset will replace
-    data = news_dataset.newsDataset(DATA_DIR, TOPICS)
-
-    # Todo: not needed, tabulardataset will replace
-    train = math.floor(len(data) * (4 / 5))
-    test = math.floor((len(data) - train) / 2)
-    dev = math.ceil((len(data) - train) / 2)
-
-    # Todo: not needed, tabulardataset will replace
-    train_data, test_data, dev_data = torch.utils.data.random_split(
-        dataset=data, lengths=[train, test, dev]
+    txt_field = Field(
+        sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
     )
 
-    txt_field = Field(sequential=True, use_vocab=True, include_lengths=True)
+    label_field = Field(sequential=False, use_vocab=True)
 
-    label_field = Field(sequential=True, use_vocab=False)
+    tsv_fields = [("NewsText", txt_field), ("Labels", label_field)]
+
+    train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
+        path="/home/heikki/koulu/intro-to-dl/final-project/data",
+        format="tsv",
+        train="train.tsv",
+        validation="dev.tsv",
+        test="test.tsv",
+        fields=tsv_fields,
+        skip_header=False,
+    )
 
     txt_field.build_vocab(
         train_data,
@@ -62,10 +79,16 @@ if __name__ == "__main__":
 
     label_field.build_vocab(train_data)
 
+    # torch.save(txt_field, "txt_field.pth")  # Save the vocab object for ease of use
+    # torch.save(label_field, 'label_field.pth')
+
+    # txt_field = torch.load("txt_field.pth")  # Load the vocab objects into variables
+    # label_field = torch.load('label_field.pth')
+
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
         batch_sizes=(BATCH_SIZE_TRAIN, BATCH_SIZE_DEV, BATCH_SIZE_TEST),
-        sort_key=lambda x: len(x[0]),
+        sort_key=lambda x: len(x.NewsText),
         device=device,
         sort_within_batch=True,
         repeat=False,
@@ -93,8 +116,28 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    loss_function = torch.nn.NLLLoss()
+    criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
 
-    for item in train_iter:
-        print(data)
+    lstm_model = lstm_model.to(device)
+    criterion = criterion.to(device)
+
+    for epoch in range(N_EPOCHS):
+
+        lstm_model.train()
+
+        for batch in train_iter:
+            optimizer.zero_grad()
+
+            seqs, seqs_lens = batch.NewsText
+            target = batch.Labels
+
+            print(target.shape)
+
+            out = lstm_model(seqs, seqs_lens)
+
+            print(out.shape)
+
+            loss = criterion(out, target)
+            loss.backward()
+            optimizer.step()

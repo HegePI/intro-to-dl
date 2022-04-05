@@ -32,4 +32,4 @@ class Model(torch.nn.Module):
 
         linear_output = self.linear(torch.cat([max_pool], dim=1))
 
-        return torch.nn.functional.log_softmax(linear_output, dim=1)
+        return torch.nn.functional.log_softmax(linear_output, dim=-1)

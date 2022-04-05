@@ -28,10 +28,12 @@ def write_to_tsv(tsv_file_path: str, xml_file_path: str, codes):
         for item in sublist
     ]
 
-    filtered_codes = [code for code in codes_in_xml if code in list(codes.keys())]
+    filtered_codes = " ".join(
+        [code for code in codes_in_xml if code in list(codes.keys())]
+    )
 
     f = open(tsv_file_path, "a")
-    f.write(f"{text}\t{str(filtered_codes)}\n")
+    f.write(f'"{text}"\t"{filtered_codes}"\n')
     f.close()
 
 
@@ -71,13 +73,13 @@ class XmlToTsv:
         test_files = xml_files[train_amount + 1 : -dev_amount]
 
         for file in train_files:
-            write_to_tsv("train.tsv", file, self.codes)
+            write_to_tsv(f"{self.data_dir}/train.tsv", file, self.codes)
 
         for file in dev_files:
-            write_to_tsv("dev.tsv", file, self.codes)
+            write_to_tsv(f"{self.data_dir}/dev.tsv", file, self.codes)
 
         for file in test_files:
-            write_to_tsv("test.tsv", file, self.codes)
+            write_to_tsv(f"{self.data_dir}/test.tsv", file, self.codes)
 
         return (
             f"{self.data_dir}/train.tsv",
