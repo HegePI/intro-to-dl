@@ -5,39 +5,6 @@ import math
 import csv
 
 
-def write_to_csv(csv_file_path: str, xml_file_path: str, codes):
-    """
-    Function, which reads the contents of the .xml file,
-    cleans out unneeded whitespaces and
-    writes the contents of the xml files text blocks and code blocks into .csv file
-    """
-    tree = ET.parse(xml_file_path)
-    text = (
-        " ".join(list(map(lambda x: x.text, tree.findall("text/p"))))
-        .replace("\n", " ")
-        .strip()
-    )
-
-    codes_in_xml = [
-        item
-        for sublist in list(
-            map(
-                lambda x: list(x.attrib.values()),
-                tree.findall("metadata/codes/code"),
-            )
-        )
-        for item in sublist
-    ]
-
-    filtered_codes = " ".join(
-        [code for code in codes_in_xml if code in list(codes.keys())]
-    )
-
-    with open(csv_file_path, "a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([filtered_codes, text])
-
-
 class XmlToCsvWriter:
     """
     Class that handles the transformation of data from .xml to .csv files.
@@ -46,17 +13,20 @@ class XmlToCsvWriter:
     def __init__(self, data_dir: str, codes: str):
         self.data_dir = data_dir
 
-        code_and_meaning = {}
+        code_and_idx = {}
 
         with open(codes, "r") as f:
-            for line in f.readlines():
+            for idx, line in enumerate(f.readlines()):
                 if line[0] != ";":
                     parts = line.split("\t")
-                    code_and_meaning[parts[0].strip()] = parts[1].strip()
-        self.codes = code_and_meaning
+                    code_and_idx[parts[0].strip()] = idx
+        self.codes = code_and_idx
 
     def get_codes(self) -> list[str]:
         return list(self.codes.keys())
+
+    def get_idx(self, code: str) -> int:
+        return self.codes[code]
 
     def write_data_to_csv_files(
         self, csv_sizes: Tuple[float, float, float]
@@ -77,16 +47,55 @@ class XmlToCsvWriter:
         test_files = xml_files[train_amount + 1 : -dev_amount]
 
         for file in train_files:
-            write_to_csv(f"{self.data_dir}/train.csv", file, self.codes)
+            self.write_to_csv(f"{self.data_dir}/train.csv", file, self.codes)
 
         for file in dev_files:
-            write_to_csv(f"{self.data_dir}/dev.csv", file, self.codes)
+            self.write_to_csv(f"{self.data_dir}/dev.csv", file, self.codes)
 
         for file in test_files:
-            write_to_csv(f"{self.data_dir}/test.csv", file, self.codes)
+            self.write_to_csv(f"{self.data_dir}/test.csv", file, self.codes)
 
         return (
             f"{self.data_dir}/train.csv",
             f"{self.data_dir}/dev.csv",
             f"{self.data_dir}/test.csv",
         )
+
+    def write_to_csv(self, csv_file_path: str, xml_file_path: str, codes):
+        """
+        Function, which reads the contents of the .xml file,
+        cleans out unneeded whitespaces and
+        writes the contents of the xml files text blocks and code blocks into .csv file
+        """
+        tree = ET.parse(xml_file_path)
+        text = (
+            " ".join(list(map(lambda x: x.text, tree.findall("text/p"))))
+            .replace("\n", " ")
+            .strip()
+        )
+
+        codes_in_xml = [
+            item
+            for sublist in list(
+                map(
+                    lambda x: list(x.attrib.values()),
+                    tree.findall("metadata/codes/code"),
+                )
+            )
+            for item in sublist
+        ]
+
+        idx = list(
+            map(
+                str,
+                map(
+                    self.get_idx,
+                    [code for code in codes_in_xml if code in list(codes.keys())],
+                ),
+            )
+        )
+        res = " ".join(idx)
+
+        with open(csv_file_path, "a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([res, text])

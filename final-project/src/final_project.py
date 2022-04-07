@@ -1,4 +1,4 @@
-from calendar import EPOCH
+from typing import Dict
 import re
 import numpy as np
 import spacy
@@ -13,9 +13,9 @@ import xml_to_csv
 
 # Hyperparameters
 N_EPOCHS = 15
-BATCH_SIZE_TRAIN = 100
-BATCH_SIZE_TEST = 100
-BATCH_SIZE_DEV = 100
+BATCH_SIZE_TRAIN = 1
+BATCH_SIZE_TEST = 1
+BATCH_SIZE_DEV = 1
 LR = 0.01
 
 
@@ -30,17 +30,6 @@ TOPICS = "final-project/topic_codes.txt"
 
 # Auxilary functions for data preparation
 tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
-
-
-def labels_to_one_hot(labels: list[str], codes: list[str]) -> list[int]:
-    one_hot = np.zeros(len(codes))
-    for label in labels:
-        label_one_hot = np.zeros(len(codes))
-        label_idx = codes.index(label)
-        label_one_hot[label_idx] = 1
-        one_hot = one_hot + label_one_hot
-
-    return one_hot.tolist()
 
 
 def tokenizer(s):
@@ -60,11 +49,11 @@ if __name__ == "__main__":
 
     data_processor = xml_to_csv.XmlToCsvWriter(DATA_DIR, TOPICS)
 
-    codes = data_processor.get_codes()
+    # codes = data_processor.get_codes()
 
-    train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
-        csv_sizes=[7 / 10, 2 / 10, 1 / 10]
-    )
+    # train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
+    #     csv_sizes=[7 / 10, 2 / 10, 1 / 10]
+    # )
 
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
@@ -73,7 +62,9 @@ if __name__ == "__main__":
     label_field = Field(
         sequential=False,
         use_vocab=False,
-        preprocessing=Pipeline(lambda x: labels_to_one_hot(x.split(), codes)),
+        preprocessing=Pipeline(
+            lambda x: list(map(int, x.split())),
+        ),
     )
 
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
