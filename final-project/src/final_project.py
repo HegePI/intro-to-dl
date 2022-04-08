@@ -13,9 +13,9 @@ import xml_to_csv
 
 # Hyperparameters
 N_EPOCHS = 15
-BATCH_SIZE_TRAIN = 1
-BATCH_SIZE_TEST = 1
-BATCH_SIZE_DEV = 1
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+BATCH_SIZE_DEV = 10
 LR = 0.01
 
 
@@ -44,6 +44,22 @@ def tweet_clean(text):
     return text.strip()
 
 
+def idx_to_multi_label_ohe(labels: list[int]) -> list[int]:
+    labels = list(map(int, labels.split()))
+    if len(labels) == 0:
+        return torch.zeros(NUM_CLASSES).tolist()
+    else:
+        labels = torch.tensor(labels)
+        labels = labels.unsqueeze(0)
+        labels = (
+            torch.zeros(labels.size(0), NUM_CLASSES)
+            .scatter_(1, labels, 1)
+            .squeeze(0)
+            .tolist()
+        )
+        return labels
+
+
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -62,9 +78,7 @@ if __name__ == "__main__":
     label_field = Field(
         sequential=False,
         use_vocab=False,
-        preprocessing=Pipeline(
-            lambda x: list(map(int, x.split())),
-        ),
+        preprocessing=Pipeline(lambda x: idx_to_multi_label_ohe(x)),
     )
 
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
@@ -120,7 +134,7 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
 
     lstm_model = lstm_model.to(device)
@@ -134,14 +148,14 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             seqs, seqs_lens = batch.NewsText
-            target = batch.Labels
+            targets = batch.Labels.float()
 
-            print(target.shape)
+            print(targets.shape)
 
             out = lstm_model(seqs, seqs_lens)
 
             print(out.shape)
 
-            loss = criterion(out, target)
+            loss = criterion(out, targets)
             loss.backward()
             optimizer.step()
