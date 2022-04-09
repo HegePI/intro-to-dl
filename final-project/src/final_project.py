@@ -10,12 +10,13 @@ from torchtext.legacy.data import Pipeline
 
 import model
 import xml_to_csv
+import time
 
 # Hyperparameters
-N_EPOCHS = 15
-BATCH_SIZE_TRAIN = 10
-BATCH_SIZE_TEST = 10
-BATCH_SIZE_DEV = 10
+N_EPOCHS = 5
+BATCH_SIZE_TRAIN = 2
+BATCH_SIZE_TEST = 2
+BATCH_SIZE_DEV = 2
 LR = 0.01
 
 
@@ -43,6 +44,35 @@ def tweet_clean(text):
     text = re.sub(r"www?:/\/\S+", " ", text)
     return text.strip()
 
+def epoch_time(start_time, end_time):
+    elapsed_time = end_time - start_time
+    elapsed_mins = int(elapsed_time / 60)
+    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
+    return elapsed_mins, elapsed_secs
+
+def get_accuracy(output, gold):
+    _, predicted = torch.max(output, dim=1)
+    correct = torch.sum(torch.eq(predicted, gold)).item()
+    acc = correct / gold.shape[0]
+    return acc
+
+def evaluate(model, iterator, criterion):
+    epoch_loss = 0
+    epoch_acc = 0
+
+    model.eval()
+    with torch.no_grad():
+        for batch in iterator:
+            text, text_lengths = batch.NewsText
+            predictions = model(text, text_lengths).squeeze(1)
+            loss = criterion(predictions, batch.Labels)
+            acc = get_accuracy(predictions, batch.Labels)
+            epoch_loss += loss.item()
+            epoch_acc += acc
+
+    return epoch_loss / len(iterator), epoch_acc / len(iterator)
+
+
 
 def idx_to_multi_label_ohe(labels: list[int]) -> list[int]:
     labels = list(map(int, labels.split()))
@@ -65,11 +95,11 @@ if __name__ == "__main__":
 
     data_processor = xml_to_csv.XmlToCsvWriter(DATA_DIR, TOPICS)
 
-    # codes = data_processor.get_codes()
+    codes = data_processor.get_codes()
 
-    # train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
-    #     csv_sizes=[7 / 10, 2 / 10, 1 / 10]
-    # )
+    train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
+        csv_sizes=[7 / 10, 2 / 10, 1 / 10]
+    )
 
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
@@ -84,7 +114,7 @@ if __name__ == "__main__":
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
 
     train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
-        path="/home/heikki/koulu/intro-to-dl/final-project/data",
+        path="/home/markus/intro-to-dl/final-project/data",
         format="csv",
         train="train.csv",
         validation="dev.csv",
@@ -141,6 +171,12 @@ if __name__ == "__main__":
     criterion = criterion.to(device)
 
     for epoch in range(N_EPOCHS):
+        start_time = time.time()
+        epoch_loss = 0
+        epoch_acc = 0
+        
+        correct = 0
+        total = 0
 
         lstm_model.train()
 
@@ -159,3 +195,35 @@ if __name__ == "__main__":
             loss = criterion(out, targets)
             loss.backward()
             optimizer.step()
+
+            epoch_loss += loss
+
+            outputs = torch.sigmoid(out).cpu()
+            predictions = outputs.detach().numpy() # detach the tensors, numpy doesn't play well when a gradient is attached to a tensor
+            predicted = np.round(predictions) # round 0.49 and smaller to 0, 0.5 to 1.
+            total += targets.size(1) # Total number of predictions. Not sure if this is the right amount ??
+
+            #print(targets.size(1))
+            #correct += (predicted == targets).sum().item()
+
+            correct += (predicted == targets.numpy().astype(int)).sum()
+
+
+        # Not functional yet
+        train_loss, train_acc = (
+            epoch_loss / len(train_iter),
+            epoch_acc / len(train_iter),
+        )
+        #valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
+
+        end_time = time.time()
+        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+
+        accuracy = correct / total
+        print("Accuracy: {}%".format(accuracy))
+        
+        print(f"Train Acc: {train_acc*100:.2f}%")
+
+        print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
+        #print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
+        #print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
