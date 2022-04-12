@@ -1,3 +1,4 @@
+import json
 import re
 import numpy as np
 import spacy
@@ -8,25 +9,10 @@ from torchtext.legacy.data import Field
 from torchtext.legacy.data import Pipeline
 
 import model
-import xml_to_csv
 import time
 
-# Hyperparameters
-N_EPOCHS = 5
-BATCH_SIZE_TRAIN = 10
-BATCH_SIZE_TEST = 10
-BATCH_SIZE_DEV = 10
-LR = 0.01
-PATH = "/home/heikki/koulu/intro-to-dl/final-project/data"
-
-
-# --- fixed constants ---
-NUM_CLASSES = 126
-# Possible embedding dims: 50, 100, 200
-EMBEDDING_DIM = 50
-LSTM_HIDDEN_DIM = 200
-DATA_DIR = "final-project/data"
-TOPICS = "final-project/topic_codes.txt"
+# Possible modes: base
+MODE = "base"
 
 
 # Auxilary functions for data preparation
@@ -76,15 +62,15 @@ def evaluate(model, iterator, criterion):
     return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
 
-def idx_to_multi_label_ohe(labels: list[int]) -> list[int]:
+def idx_to_multi_label_ohe(labels: list[int], n_classes: int) -> list[int]:
     labels = list(map(int, labels.split()))
     if len(labels) == 0:
-        return torch.zeros(NUM_CLASSES).tolist()
+        return torch.zeros(n_classes).tolist()
     else:
         labels = torch.tensor(labels)
         labels = labels.unsqueeze(0)
         labels = (
-            torch.zeros(labels.size(0), NUM_CLASSES)
+            torch.zeros(labels.size(0), n_classes)
             .scatter_(1, labels, 1)
             .squeeze(0)
             .tolist()
@@ -93,15 +79,10 @@ def idx_to_multi_label_ohe(labels: list[int]) -> list[int]:
 
 
 if __name__ == "__main__":
+    with open("final-project/src/hyperparameters.json") as file:
+        params = json.loads(file.read())
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    data_processor = xml_to_csv.XmlToCsvWriter(DATA_DIR, TOPICS)
-
-    codes = data_processor.get_codes()
-
-    # train_csv, dev_csv, test_csv = data_processor.write_data_to_csv_files(
-    #     csv_sizes=[7 / 10, 2 / 10, 1 / 10]
-    # )
 
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
@@ -110,13 +91,15 @@ if __name__ == "__main__":
     label_field = Field(
         sequential=False,
         use_vocab=False,
-        preprocessing=Pipeline(lambda x: idx_to_multi_label_ohe(x)),
+        preprocessing=Pipeline(
+            lambda x: idx_to_multi_label_ohe(x, params[MODE]["num_classes"])
+        ),
     )
 
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
 
     train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
-        path=PATH,
+        path=params[MODE]["data_path"],
         format="csv",
         train="train.csv",
         validation="dev.csv",
@@ -125,11 +108,12 @@ if __name__ == "__main__":
         skip_header=False,
     )
 
+    ed = params[MODE]["embedding_dim"]
     txt_field.build_vocab(
         train_data,
         dev_data,
         max_size=100_000,
-        vectors=f"glove.6B.{EMBEDDING_DIM}d",
+        vectors=f"glove.6B.{ed}d",
         unk_init=torch.Tensor.normal_,
     )
 
@@ -137,7 +121,11 @@ if __name__ == "__main__":
 
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
-        batch_sizes=(BATCH_SIZE_TRAIN, BATCH_SIZE_DEV, BATCH_SIZE_TEST),
+        batch_sizes=(
+            params[MODE]["train_batch_size"],
+            params[MODE]["dev_batch_size"],
+            params[MODE]["test_batch_size"],
+        ),
         sort_key=lambda x: len(x.NewsText),
         device=device,
         sort_within_batch=True,
@@ -149,17 +137,21 @@ if __name__ == "__main__":
 
     lstm_model = model.Model(
         vocab_size=len(txt_field.vocab),
-        embedding_dim=EMBEDDING_DIM,
-        lstm_hidden_dim=LSTM_HIDDEN_DIM,
-        num_classes=NUM_CLASSES,
+        embedding_dim=params[MODE]["embedding_dim"],
+        lstm_hidden_dim=params[MODE]["lstm_hidden_dim"],
+        num_classes=params[MODE]["num_classes"],
     )
 
     pretrained_embeddings = txt_field.vocab.vectors
     lstm_model.embedding.weight.data.copy_(pretrained_embeddings)
 
     # Fix the <UNK> and <PAD> tokens in the embedding layer
-    lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
-    lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
+    lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(
+        params[MODE]["embedding_dim"]
+    )
+    lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(
+        params[MODE]["embedding_dim"]
+    )
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -167,12 +159,14 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     criterion = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(lstm_model.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(
+        lstm_model.parameters(), lr=params[MODE]["learning_rate"]
+    )
 
     lstm_model = lstm_model.to(device)
     criterion = criterion.to(device)
 
-    for epoch in range(N_EPOCHS):
+    for epoch in range(params[MODE]["n_epochs"]):
         start_time = time.time()
         epoch_loss = 0
         epoch_acc = 0
