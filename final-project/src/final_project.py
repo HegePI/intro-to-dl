@@ -11,7 +11,7 @@ from torchtext.legacy.data import Pipeline
 import model
 import time
 
-# Possible modes: base
+# Possible modes: base, more_epochs_and_bigger_batches
 MODE = "base"
 
 
