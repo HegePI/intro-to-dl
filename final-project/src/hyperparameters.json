@@ -5,22 +5,22 @@
     "test_batch_size": 10,
     "dev_batch_size": 10,
     "learning_rate": 0.01,
-    "data_path": "final-project/data",
-    "topic_path": "final-project/topic_codes.txt",
     "num_classes": 126,
     "embedding_dim": 50,
-    "lstm_hidden_dim": 200
+    "lstm_hidden_dim": 200,
+    "data_path": "~/final-project/data",
+    "topic_path": "~/final-project/topic_codes.txt"
   },
-  "another_params": {
-    "n_epochs": 5,
-    "train_batch_size": 10,
-    "test_batch_size": 10,
-    "dev_batch_size": 10,
+  "more_epochs_and_bigger_batches": {
+    "n_epochs": 20,
+    "train_batch_size": 100,
+    "test_batch_size": 100,
+    "dev_batch_size": 100,
     "learning_rate": 0.01,
-    "data_path": "final-project/data",
-    "topic_path": "final-project/topic_codes.txt",
     "num_classes": 126,
     "embedding_dim": 50,
-    "lstm_hidden_dim": 200
+    "lstm_hidden_dim": 200,
+    "data_path": "~/final-project/data",
+    "topic_path": "~/final-project/topic_codes.txt"
   }
 }
