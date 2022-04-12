@@ -27,6 +27,6 @@ class Model(torch.nn.Module):
         ouput, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output)
 
         linear_output = self.linear(hidden_state[-1])
-        return linear_output
 
-        # return torch.nn.functional.log_softmax(linear_output, dim=-1)
+        out = torch.relu(linear_output).cpu()
+        return out
