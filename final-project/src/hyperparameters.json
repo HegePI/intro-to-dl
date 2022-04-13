@@ -8,6 +8,8 @@
     "num_classes": 126,
     "embedding_dim": 50,
     "lstm_hidden_dim": 200,
+    "loss_function": "bce_with_logits_loss",
+    "optimizer": "sgd",
     "data_path": "~/final-project/data",
     "topic_path": "~/final-project/topic_codes.txt"
   },
@@ -20,6 +22,36 @@
     "num_classes": 126,
     "embedding_dim": 50,
     "lstm_hidden_dim": 200,
+    "loss_function": "bce_with_logits_loss",
+    "optimizer": "sgd",
+    "data_path": "~/final-project/data",
+    "topic_path": "~/final-project/topic_codes.txt"
+  },
+  "adam_optimizer": {
+    "n_epochs": 20,
+    "train_batch_size": 100,
+    "test_batch_size": 100,
+    "dev_batch_size": 100,
+    "learning_rate": 0.01,
+    "num_classes": 126,
+    "embedding_dim": 50,
+    "lstm_hidden_dim": 200,
+    "loss_function": "bce_with_logits_loss",
+    "optimizer": "adam",
+    "data_path": "~/final-project/data",
+    "topic_path": "~/final-project/topic_codes.txt"
+  },
+  "rms_prop_optimizer": {
+    "n_epochs": 20,
+    "train_batch_size": 100,
+    "test_batch_size": 100,
+    "dev_batch_size": 100,
+    "learning_rate": 0.01,
+    "num_classes": 126,
+    "embedding_dim": 50,
+    "lstm_hidden_dim": 200,
+    "loss_function": "bce_with_logits_loss",
+    "optimizer": "rms_prop",
     "data_path": "~/final-project/data",
     "topic_path": "~/final-project/topic_codes.txt"
   }

@@ -1,3 +1,4 @@
+from nis import match
 import sys
 import json
 import re
@@ -79,12 +80,24 @@ def idx_to_multi_label_ohe(labels: list[int], n_classes: int) -> list[int]:
         return labels
 
 
+def get_optimizer(optimizer, params, lr):
+    if optimizer == "sgd":
+        return torch.optim.SGD(params, lr)
+    elif optimizer == "adam":
+        return torch.optim.Adam(params, lr)
+    elif optimizer == "rms_prop":
+        return torch.optim.RMSprop(params, lr)
+    else:
+        print("No optimizer specified in hyperparameters, defaulting to SGD")
+        return torch.optim.SGD(params, lr)
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 0:
         print("no mode defined, terminating")
         sys.exit()
 
-    mode = sys.argv[0]
+    mode = sys.argv[1]
 
     with open("final-project/src/hyperparameters.json") as file:
         params = json.loads(file.read())
@@ -166,8 +179,11 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     criterion = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(
-        lstm_model.parameters(), lr=params[mode]["learning_rate"]
+
+    optimizer = get_optimizer(
+        params[mode]["optimizer"],
+        params=lstm_model.parameters(),
+        lr=params[mode]["learning_rate"],
     )
 
     lstm_model = lstm_model.to(device)
