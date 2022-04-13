@@ -1,4 +1,3 @@
-from nis import match
 import sys
 import json
 import re
@@ -12,9 +11,6 @@ from torchtext.legacy.data import Pipeline
 
 import model
 import time
-
-# Possible modes: base, more_epochs_and_bigger_batches
-# MODE = "base"
 
 
 # Auxilary functions for data preparation
