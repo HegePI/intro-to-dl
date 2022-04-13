@@ -1,3 +1,4 @@
+import sys
 import json
 import re
 import numpy as np
@@ -12,7 +13,7 @@ import model
 import time
 
 # Possible modes: base, more_epochs_and_bigger_batches
-MODE = "base"
+# MODE = "base"
 
 
 # Auxilary functions for data preparation
@@ -79,6 +80,12 @@ def idx_to_multi_label_ohe(labels: list[int], n_classes: int) -> list[int]:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 0:
+        print("no mode defined, terminating")
+        sys.exit()
+
+    mode = sys.argv[0]
+
     with open("final-project/src/hyperparameters.json") as file:
         params = json.loads(file.read())
 
@@ -92,14 +99,14 @@ if __name__ == "__main__":
         sequential=False,
         use_vocab=False,
         preprocessing=Pipeline(
-            lambda x: idx_to_multi_label_ohe(x, params[MODE]["num_classes"])
+            lambda x: idx_to_multi_label_ohe(x, params[mode]["num_classes"])
         ),
     )
 
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
 
     train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
-        path=params[MODE]["data_path"],
+        path=params[mode]["data_path"],
         format="csv",
         train="train.csv",
         validation="dev.csv",
@@ -108,7 +115,7 @@ if __name__ == "__main__":
         skip_header=False,
     )
 
-    ed = params[MODE]["embedding_dim"]
+    ed = params[mode]["embedding_dim"]
     txt_field.build_vocab(
         train_data,
         dev_data,
@@ -122,9 +129,9 @@ if __name__ == "__main__":
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
         batch_sizes=(
-            params[MODE]["train_batch_size"],
-            params[MODE]["dev_batch_size"],
-            params[MODE]["test_batch_size"],
+            params[mode]["train_batch_size"],
+            params[mode]["dev_batch_size"],
+            params[mode]["test_batch_size"],
         ),
         sort_key=lambda x: len(x.NewsText),
         device=device,
@@ -137,9 +144,9 @@ if __name__ == "__main__":
 
     lstm_model = model.Model(
         vocab_size=len(txt_field.vocab),
-        embedding_dim=params[MODE]["embedding_dim"],
-        lstm_hidden_dim=params[MODE]["lstm_hidden_dim"],
-        num_classes=params[MODE]["num_classes"],
+        embedding_dim=params[mode]["embedding_dim"],
+        lstm_hidden_dim=params[mode]["lstm_hidden_dim"],
+        num_classes=params[mode]["num_classes"],
     )
 
     pretrained_embeddings = txt_field.vocab.vectors
@@ -147,10 +154,10 @@ if __name__ == "__main__":
 
     # Fix the <UNK> and <PAD> tokens in the embedding layer
     lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(
-        params[MODE]["embedding_dim"]
+        params[mode]["embedding_dim"]
     )
     lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(
-        params[MODE]["embedding_dim"]
+        params[mode]["embedding_dim"]
     )
 
     if torch.cuda.is_available():
@@ -160,13 +167,13 @@ if __name__ == "__main__":
 
     criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(
-        lstm_model.parameters(), lr=params[MODE]["learning_rate"]
+        lstm_model.parameters(), lr=params[mode]["learning_rate"]
     )
 
     lstm_model = lstm_model.to(device)
     criterion = criterion.to(device)
 
-    for epoch in range(params[MODE]["n_epochs"]):
+    for epoch in range(params[mode]["n_epochs"]):
         start_time = time.time()
         epoch_loss = 0
         epoch_acc = 0
