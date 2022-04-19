@@ -89,11 +89,11 @@ def get_optimizer(optimizer, params, lr):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 0:
-        print("no mode defined, terminating")
-        sys.exit()
+    mode = "base"
+    if len(sys.argv) > 0:
+        mode = sys.argv[1]
 
-    mode = sys.argv[1]
+    print("no mode defined, defaulting to base mode")
 
     with open("final-project/src/hyperparameters.json") as file:
         params = json.loads(file.read())
@@ -236,3 +236,5 @@ if __name__ == "__main__":
         print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
+
+    torch.save(lstm_model, ".")
