@@ -94,6 +94,10 @@ class XmlToCsvWriter:
                 ),
             )
         )
+        # check if no labels for sample, and set 127 as NONE label
+        if len(idx) == 0:
+            idx = ["127"]
+
         res = " ".join(idx)
 
         with open(csv_file_path, "a", newline="") as file:
