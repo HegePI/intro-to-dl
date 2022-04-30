@@ -240,7 +240,7 @@ if __name__ == "__main__":
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    if mode == "more_epochs_and_bigger_bacthes:
+    if mode == "more_epochs_and_bigger_batches":
         torch.save(lstm_model, "more_epochs_and_bigger_batches")
     if mode == "adam_optimizer":
         torch.save(lstm_model, "adam_optimizer")
