@@ -98,4 +98,7 @@ class XmlToCsvWriter:
 
         with open(csv_file_path, "a", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([res, text])
+            if len(text) > 0:
+                writer.writerow([res, text])
+            else:
+                print("empy line")

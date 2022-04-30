@@ -13,15 +13,19 @@ import model
 import time
 
 
+#import spacy.cli
+#spacy.cli.download("en_core_web_sm")
+
+
 # Auxilary functions for data preparation
 tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
 
 
-def tokenizer(s: str) -> str:
+def tokenizer(s):
     return [w.text.lower() for w in tok(tweet_clean(s))]
 
 
-def tweet_clean(text: str) -> str:
+def tweet_clean(text):
     """remove non alphanumeric character"""
     text = re.sub(r"[^A-Za-z0-9]+", " ", text)
     text = re.sub(r"https?:/\/\S+", " ", text)  # remove links
@@ -29,14 +33,14 @@ def tweet_clean(text: str) -> str:
     return text.strip()
 
 
-def epoch_time(start_time: int, end_time: int) -> int:
+def epoch_time(start_time, end_time):
     elapsed_time = end_time - start_time
     elapsed_mins = int(elapsed_time / 60)
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
 
 
-def get_accuracy(output: torch.Tensor, gold: torch.Tensor) -> float:
+def get_accuracy(output, gold):
     _, predicted = torch.max(output, dim=1)
     correct = torch.sum(torch.eq(predicted, gold)).item()
     acc = correct / gold.shape[0]
@@ -60,7 +64,7 @@ def evaluate(model, iterator, criterion):
     return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
 
-def idx_to_multi_label_ohe(labels: list[int], n_classes: int) -> list[int]:
+def idx_to_multi_label_ohe(labels, n_classes):
     labels = list(map(int, labels.split()))
     if len(labels) == 0:
         return torch.zeros(n_classes).tolist()
@@ -90,16 +94,16 @@ def get_optimizer(optimizer, params, lr):
 
 if __name__ == "__main__":
     mode = "base"
-    if len(sys.argv) > 0:
+    if len(sys.argv) > 1:
         mode = sys.argv[1]
 
-    print("no mode defined, defaulting to base mode")
+    print(mode)
 
-    with open("final-project/src/hyperparameters.json") as file:
+    with open("hyperparameters.json") as file:
         params = json.loads(file.read())
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
     )
@@ -147,6 +151,7 @@ if __name__ == "__main__":
         sort_within_batch=True,
         repeat=False,
     )
+    
 
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
     UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
@@ -168,11 +173,6 @@ if __name__ == "__main__":
     lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(
         params[mode]["embedding_dim"]
     )
-
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
 
     criterion = torch.nn.BCEWithLogitsLoss()
 
@@ -210,13 +210,16 @@ if __name__ == "__main__":
             epoch_loss += loss
 
             # detach the tensors, numpy doesn't play well when a gradient is attached to a tensor
-            predictions = out.detach().numpy()
+	    
+            predictions = out.cpu().detach().numpy()
+            # added .cpu() to predictions
             predicted = np.round(predictions)  # round 0.49 and smaller to 0, 0.5 to 1.
             total += targets.size(
                 1
             )  # Total number of predictions. Not sure if this is the right amount ??
 
-            correct += (predicted == targets.numpy().astype(int)).sum()
+            correct += (predicted == targets.cpu().numpy().astype(int)).sum()
+            #added .cpu() to targets
 
         # Not functional yet
         train_loss, train_acc = (
@@ -237,4 +240,9 @@ if __name__ == "__main__":
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    torch.save(lstm_model, ".")
+    if mode == "more_epochs_and_bigger_bacthes:
+        torch.save(lstm_model, "more_epochs_and_bigger_batches")
+    if mode == "adam_optimizer":
+        torch.save(lstm_model, "adam_optimizer")
+    if mode == "rms_prop_optimizer":
+        torch.save(lstm_model, "rms_prop_optimizer")
