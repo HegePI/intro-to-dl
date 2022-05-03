@@ -31,5 +31,5 @@ class Model(torch.nn.Module):
 
         linear_output = self.linear(hidden_state[-1])
 #out might need to have .cpu()
-        out = torch.relu(linear_output)
+        out = torch.sigmoid(linear_output)
         return out

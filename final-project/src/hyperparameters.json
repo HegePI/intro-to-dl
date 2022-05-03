@@ -10,8 +10,8 @@
     "lstm_hidden_dim": 200,
     "loss_function": "bce_with_logits_loss",
     "optimizer": "sgd",
-    "data_path": "~/final-project/data",
-    "topic_path": "~/final-project/topic_codes.txt"
+    "data_path": "/home/markus/intro-to-dl/final-project/data",
+    "topic_path": "/home/markus/intro-to-dl/final-project/topic_codes.txt"
   },
   "more_epochs_and_bigger_batches": {
     "n_epochs": 20,

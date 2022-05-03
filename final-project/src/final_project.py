@@ -5,6 +5,7 @@ import numpy as np
 import spacy
 import torch
 import torchtext
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 from torchtext.legacy.data import Field
 from torchtext.legacy.data import Pipeline
@@ -47,21 +48,16 @@ def get_accuracy(output, gold):
     return acc
 
 
-def evaluate(model, iterator, criterion):
-    epoch_loss = 0
-    epoch_acc = 0
+def evaluate(target, predicted):
+    target = target.detach().cpu().numpy()
+    prediction = torch.round(predicted).detach().cpu().numpy()
 
-    model.eval()
-    with torch.no_grad():
-        for batch in iterator:
-            text, text_lengths = batch.NewsText
-            predictions = model(text, text_lengths).squeeze(1)
-            loss = criterion(predictions, batch.Labels)
-            acc = get_accuracy(predictions, batch.Labels)
-            epoch_loss += loss.item()
-            epoch_acc += acc
+    batch_accuracy = accuracy_score(target, prediction)
+    batch_precision = precision_score(target, prediction, average="micro")
+    batch_recall = recall_score(target, prediction, average="micro")
+    batch_f1_score = f1_score(target, prediction, average="micro")
 
-    return epoch_loss / len(iterator), epoch_acc / len(iterator)
+    return batch_accuracy, batch_precision, batch_recall, batch_f1_score
 
 
 def idx_to_multi_label_ohe(labels, n_classes):
@@ -99,7 +95,7 @@ if __name__ == "__main__":
 
     print(mode)
 
-    with open("hyperparameters.json") as file:
+    with open("/home/markus/intro-to-dl/final-project/src/hyperparameters.json") as file:
         params = json.loads(file.read())
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -209,17 +205,12 @@ if __name__ == "__main__":
 
             epoch_loss += loss
 
-            # detach the tensors, numpy doesn't play well when a gradient is attached to a tensor
-	    
-            predictions = out.cpu().detach().numpy()
-            # added .cpu() to predictions
-            predicted = np.round(predictions)  # round 0.49 and smaller to 0, 0.5 to 1.
-            total += targets.size(
-                1
-            )  # Total number of predictions. Not sure if this is the right amount ??
+            total += targets.size(1)  
 
-            correct += (predicted == targets.cpu().numpy().astype(int)).sum()
-            #added .cpu() to targets
+
+            batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
+            print(loss)
+            print(batch_acc, batch_prec, batch_rec, batch_f1)
 
         # Not functional yet
         train_loss, train_acc = (
