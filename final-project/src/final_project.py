@@ -40,14 +40,6 @@ def epoch_time(start_time, end_time):
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
 
-
-def get_accuracy(output, gold):
-    _, predicted = torch.max(output, dim=1)
-    correct = torch.sum(torch.eq(predicted, gold)).item()
-    acc = correct / gold.shape[0]
-    return acc
-
-
 def evaluate(target, predicted):
     target = target.detach().cpu().numpy()
     prediction = torch.round(predicted).detach().cpu().numpy()
@@ -184,10 +176,12 @@ if __name__ == "__main__":
     for epoch in range(params[mode]["n_epochs"]):
         start_time = time.time()
         epoch_loss = 0
-        epoch_acc = 0
-
-        correct = 0
+        train_accuracy = 0
+        train_precision = 0
+        train_recall = 0
+        train_f1 = 0
         total = 0
+
 
         lstm_model.train()
 
@@ -209,23 +203,22 @@ if __name__ == "__main__":
 
 
             batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
+            print(out)
             print(loss)
             print(batch_acc, batch_prec, batch_rec, batch_f1)
 
-        # Not functional yet
-        train_loss, train_acc = (
-            epoch_loss / len(train_iter),
-            epoch_acc / len(train_iter),
-        )
-        # valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
+            total+= len(train_iter)
+            epoch_loss += float(loss)
+            train_accuracy += batch_acc
+            train_precision += batch_prec
+            train_recall += batch_rec
+            train_f1 += batch_f1
+
+            print("Epoch_loss", epoch_loss)
+            print("Accuracy:", 100 * train_accuracy)
 
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-
-        accuracy = correct / total
-        print("Accuracy: {}%".format(accuracy))
-
-        print(f"Train Acc: {train_acc*100:.2f}%")
 
         print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
