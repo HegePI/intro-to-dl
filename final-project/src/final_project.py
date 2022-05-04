@@ -1,7 +1,6 @@
 import sys
 import json
 import re
-import numpy as np
 import spacy
 import torch
 import torchtext
@@ -12,10 +11,6 @@ from torchtext.legacy.data import Pipeline
 
 import model
 import time
-
-
-#import spacy.cli
-#spacy.cli.download("en_core_web_sm")
 
 
 # Auxilary functions for data preparation
@@ -39,6 +34,7 @@ def epoch_time(start_time, end_time):
     elapsed_mins = int(elapsed_time / 60)
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
+
 
 def evaluate(target, predicted):
     target = target.detach().cpu().numpy()
@@ -85,13 +81,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         mode = sys.argv[1]
 
-    print(mode)
-
-    with open("/home/markus/intro-to-dl/final-project/src/hyperparameters.json") as file:
+    with open(
+        "/home/markus/intro-to-dl/final-project/src/hyperparameters.json"
+    ) as file:
         params = json.loads(file.read())
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     txt_field = Field(
         sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
     )
@@ -139,7 +135,6 @@ if __name__ == "__main__":
         sort_within_batch=True,
         repeat=False,
     )
-    
 
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
     UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
@@ -182,7 +177,6 @@ if __name__ == "__main__":
         train_f1 = 0
         total = 0
 
-
         lstm_model.train()
 
         for batch in train_iter:
@@ -199,15 +193,14 @@ if __name__ == "__main__":
 
             epoch_loss += loss
 
-            total += targets.size(1)  
-
+            total += targets.size(1)
 
             batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
             print(out)
             print(loss)
             print(batch_acc, batch_prec, batch_rec, batch_f1)
 
-            total+= len(train_iter)
+            total += len(train_iter)
             epoch_loss += float(loss)
             train_accuracy += batch_acc
             train_precision += batch_prec
@@ -224,9 +217,4 @@ if __name__ == "__main__":
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    if mode == "more_epochs_and_bigger_batches":
-        torch.save(lstm_model, "more_epochs_and_bigger_batches")
-    if mode == "adam_optimizer":
-        torch.save(lstm_model, "adam_optimizer")
-    if mode == "rms_prop_optimizer":
-        torch.save(lstm_model, "rms_prop_optimizer")
+    torch.save(lstm_model, mode)
