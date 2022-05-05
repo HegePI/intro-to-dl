@@ -13,10 +13,11 @@ class Model(torch.nn.Module):
         self.embedding = torch.nn.Embedding(
             num_embeddings=vocab_size, embedding_dim=embedding_dim, padding_idx=0
         )
-        self.lstm_layer = torch.nn.LSTM(embedding_dim, lstm_hidden_dim)
-        self.linear = torch.nn.Linear(
-            in_features=lstm_hidden_dim, out_features=num_classes
+        self.lstm_layer = torch.nn.LSTM(
+            input_size=embedding_dim, hidden_size=lstm_hidden_dim
         )
+        self.linear1 = torch.nn.Linear(in_features=lstm_hidden_dim, out_features=512)
+        self.linear2 = torch.nn.Linear(in_features=512, out_features=num_classes)
 
     def forward(self, seqs, seqs_lengths):
 
@@ -25,10 +26,11 @@ class Model(torch.nn.Module):
             embedding_output, seqs_lengths.cpu()
         )
 
-        lstm_output, (hidden_state, _) = self.lstm_layer(packed_embedded)
-        ouput, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output)
+        _, (hidden_state, _) = self.lstm_layer(packed_embedded)
+        # ouput, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output)
 
-        linear_output = self.linear(hidden_state[-1])
-
-        out = torch.sigmoid(linear_output)
+        out = self.linear1(hidden_state[-1])
+        out = torch.sigmoid(out)
+        out = self.linear2(out)
+        out = torch.sigmoid(out)
         return out

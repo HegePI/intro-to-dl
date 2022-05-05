@@ -157,7 +157,13 @@ if __name__ == "__main__":
         params[mode]["embedding_dim"]
     )
 
-    criterion = torch.nn.BCEWithLogitsLoss()
+    # BCELoss, when models last layer is sigmoid
+    # https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
+    criterion = torch.nn.BCELoss()
+
+    # BCEWithLogitsLoss, when models last layer is not sigmoid
+    # https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss
+    # criterion = torch.nn.BCEWithLogitsLoss()
 
     optimizer = get_optimizer(
         params[mode]["optimizer"],
@@ -175,7 +181,6 @@ if __name__ == "__main__":
         train_precision = 0
         train_recall = 0
         train_f1 = 0
-        total = 0
 
         lstm_model.train()
 
@@ -193,14 +198,8 @@ if __name__ == "__main__":
 
             epoch_loss += loss
 
-            total += targets.size(1)
-
             batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
-            print(out)
-            print(loss)
-            print(batch_acc, batch_prec, batch_rec, batch_f1)
 
-            total += len(train_iter)
             epoch_loss += float(loss)
             train_accuracy += batch_acc
             train_precision += batch_prec
