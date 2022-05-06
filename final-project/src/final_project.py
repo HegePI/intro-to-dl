@@ -1,90 +1,24 @@
 import sys
-import json
-import re
-import spacy
+
 import torch
 import torchtext
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 from torchtext.legacy.data import Field
 from torchtext.legacy.data import Pipeline
 
 import model
 import time
+from parameters import Parameters
 
-
-# Auxilary functions for data preparation
-tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
-
-
-def tokenizer(s):
-    return [w.text.lower() for w in tok(tweet_clean(s))]
-
-
-def tweet_clean(text):
-    """remove non alphanumeric character"""
-    text = re.sub(r"[^A-Za-z0-9]+", " ", text)
-    text = re.sub(r"https?:/\/\S+", " ", text)  # remove links
-    text = re.sub(r"www?:/\/\S+", " ", text)
-    return text.strip()
-
-
-def epoch_time(start_time, end_time):
-    elapsed_time = end_time - start_time
-    elapsed_mins = int(elapsed_time / 60)
-    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-    return elapsed_mins, elapsed_secs
-
-
-def evaluate(target, predicted):
-    target = target.detach().cpu().numpy()
-    prediction = torch.round(predicted).detach().cpu().numpy()
-
-    batch_accuracy = accuracy_score(target, prediction)
-    batch_precision = precision_score(target, prediction, average="micro")
-    batch_recall = recall_score(target, prediction, average="micro")
-    batch_f1_score = f1_score(target, prediction, average="micro")
-
-    return batch_accuracy, batch_precision, batch_recall, batch_f1_score
-
-
-def idx_to_multi_label_ohe(labels, n_classes):
-    labels = list(map(int, labels.split()))
-    if len(labels) == 0:
-        return torch.zeros(n_classes).tolist()
-    else:
-        labels = torch.tensor(labels)
-        labels = labels.unsqueeze(0)
-        labels = (
-            torch.zeros(labels.size(0), n_classes)
-            .scatter_(1, labels, 1)
-            .squeeze(0)
-            .tolist()
-        )
-        return labels
-
-
-def get_optimizer(optimizer, params, lr):
-    if optimizer == "sgd":
-        return torch.optim.SGD(params, lr)
-    elif optimizer == "adam":
-        return torch.optim.Adam(params, lr)
-    elif optimizer == "rms_prop":
-        return torch.optim.RMSprop(params, lr)
-    else:
-        print("No optimizer specified in hyperparameters, defaulting to SGD")
-        return torch.optim.SGD(params, lr)
+from utils import epoch_time, evaluate, get_optimizer, idx_to_multi_label_ohe, tokenizer
 
 
 if __name__ == "__main__":
-    mode = "base"
-    if len(sys.argv) > 1:
-        mode = sys.argv[1]
 
-    with open(
-        "/home/markus/intro-to-dl/final-project/src/hyperparameters.json"
-    ) as file:
-        params = json.loads(file.read())
+    params = Parameters()
+
+    if len(sys.argv) > 1:
+        params.set_mode(sys.argv[1])
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -96,14 +30,14 @@ if __name__ == "__main__":
         sequential=False,
         use_vocab=False,
         preprocessing=Pipeline(
-            lambda x: idx_to_multi_label_ohe(x, params[mode]["num_classes"])
+            lambda x: idx_to_multi_label_ohe(x, params.get("num_classes"))
         ),
     )
 
     csv_fields = [("Labels", label_field), ("NewsText", txt_field)]
 
     train_data, dev_data, test_data = torchtext.legacy.data.TabularDataset.splits(
-        path=params[mode]["data_path"],
+        path=params.get("data_path"),
         format="csv",
         train="train.csv",
         validation="dev.csv",
@@ -112,12 +46,11 @@ if __name__ == "__main__":
         skip_header=False,
     )
 
-    ed = params[mode]["embedding_dim"]
     txt_field.build_vocab(
         train_data,
         dev_data,
         max_size=100_000,
-        vectors=f"glove.6B.{ed}d",
+        vectors=f"glove.6B.{params.get('embedding_dim')}d",
         unk_init=torch.Tensor.normal_,
     )
 
@@ -126,9 +59,9 @@ if __name__ == "__main__":
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
         batch_sizes=(
-            params[mode]["train_batch_size"],
-            params[mode]["dev_batch_size"],
-            params[mode]["test_batch_size"],
+            params.get("train_batch_size"),
+            params.get("dev_batch_size"),
+            params.get("test_batch_size"),
         ),
         sort_key=lambda x: len(x.NewsText),
         device=device,
@@ -141,21 +74,17 @@ if __name__ == "__main__":
 
     lstm_model = model.Model(
         vocab_size=len(txt_field.vocab),
-        embedding_dim=params[mode]["embedding_dim"],
-        lstm_hidden_dim=params[mode]["lstm_hidden_dim"],
-        num_classes=params[mode]["num_classes"],
+        embedding_dim=params.get("embedding_dim"),
+        lstm_hidden_dim=params.get("lstm_hidden_dim"),
+        num_classes=params.get("num_classes"),
     )
 
     pretrained_embeddings = txt_field.vocab.vectors
     lstm_model.embedding.weight.data.copy_(pretrained_embeddings)
 
     # Fix the <UNK> and <PAD> tokens in the embedding layer
-    lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(
-        params[mode]["embedding_dim"]
-    )
-    lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(
-        params[mode]["embedding_dim"]
-    )
+    lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(params.get("embedding_dim"))
+    lstm_model.embedding.weight.data[PAD_IDX] = torch.zeros(params.get("embedding_dim"))
 
     # BCELoss, when models last layer is sigmoid
     # https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
@@ -166,15 +95,15 @@ if __name__ == "__main__":
     # criterion = torch.nn.BCEWithLogitsLoss()
 
     optimizer = get_optimizer(
-        params[mode]["optimizer"],
+        params.get("optimizer"),
         params=lstm_model.parameters(),
-        lr=params[mode]["learning_rate"],
+        lr=params.get("learning_rate"),
     )
 
     lstm_model = lstm_model.to(device)
     criterion = criterion.to(device)
 
-    for epoch in range(params[mode]["n_epochs"]):
+    for epoch in range(params.get("n_epochs")):
         start_time = time.time()
         epoch_loss = 0
         train_accuracy = 0
@@ -216,4 +145,4 @@ if __name__ == "__main__":
         # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    torch.save(lstm_model, mode)
+    torch.save(lstm_model, params.get_mode())
