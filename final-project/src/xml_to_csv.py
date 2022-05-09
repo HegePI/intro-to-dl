@@ -105,4 +105,4 @@ class XmlToCsvWriter:
             if len(text) > 0:
                 writer.writerow([res, text])
             else:
-                print("empy line")
+                print("empty line")

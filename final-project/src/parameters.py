@@ -7,7 +7,9 @@ class Parameters:
     def __init__(self, mode="base"):
         self.mode = mode
 
-        with open("~/intro-to-dl/final-project/src/hyperparameters.json") as file:
+        with open(
+            "/home/heikki/koulu/intro-to-dl/final-project/src/hyperparameters.json"
+        ) as file:
             self.params = json.loads(file.read())
 
     def get(self, attr):

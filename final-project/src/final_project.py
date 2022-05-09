@@ -110,10 +110,12 @@ if __name__ == "__main__":
         train_precision = 0
         train_recall = 0
         train_f1 = 0
+        batch_number = 0
 
         lstm_model.train()
 
         for batch in train_iter:
+            batch_number += 1
             optimizer.zero_grad()
 
             seqs, seqs_lens = batch.NewsText
@@ -134,9 +136,11 @@ if __name__ == "__main__":
             train_precision += batch_prec
             train_recall += batch_rec
             train_f1 += batch_f1
-
-            print("Epoch_loss", epoch_loss)
-            print("Accuracy:", 100 * train_accuracy)
+            print(batch_number)
+            print("Precision:", 100 * train_precision / batch_number)
+            print("Recall:", 100 * train_recall / batch_number)
+            print("F1:", 100 * train_f1 / batch_number)
+            print("Accuracy:", 100 * train_accuracy / batch_number)
 
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)

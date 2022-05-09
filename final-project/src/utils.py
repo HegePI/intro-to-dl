@@ -4,6 +4,9 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 import spacy
 import torch
 
+# import spacy.cli
+# spacy.cli.download("en_core_web_sm")
+
 
 tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
 
