@@ -88,11 +88,11 @@ if __name__ == "__main__":
 
     # BCELoss, when models last layer is sigmoid
     # https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
-    criterion = torch.nn.BCELoss()
+    # criterion = torch.nn.BCELoss()
 
     # BCEWithLogitsLoss, when models last layer is not sigmoid
     # https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss
-    # criterion = torch.nn.BCEWithLogitsLoss()
+    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.ones(128))
 
     optimizer = get_optimizer(
         params.get("optimizer"),
