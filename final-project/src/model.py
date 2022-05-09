@@ -32,5 +32,5 @@ class Model(torch.nn.Module):
         out = self.linear1(hidden_state[-1])
         out = torch.sigmoid(out)
         out = self.linear2(out)
-        # out = torch.sigmoid(out)
+        out = torch.sigmoid(out)
         return out
