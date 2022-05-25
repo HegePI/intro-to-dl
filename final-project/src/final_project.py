@@ -6,7 +6,7 @@ import torchtext
 from torchtext.legacy.data import Field
 from torchtext.legacy.data import Pipeline
 
-import model
+import model_old
 import time
 from parameters import Parameters
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
     UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
-    lstm_model = model.Model(
+    lstm_model = model_old.Model(
         vocab_size=len(txt_field.vocab),
         embedding_dim=params.get("embedding_dim"),
         lstm_hidden_dim=params.get("lstm_hidden_dim"),
