@@ -8,7 +8,7 @@ class Parameters:
         self.mode = mode
 
         with open(
-            "/home/heikki/koulu/intro-to-dl/final-project/src/hyperparameters.json"
+            "/users/pullihei/intro-to-dl/final-project/src/hyperparameters.json"
         ) as file:
             self.params = json.loads(file.read())
 
