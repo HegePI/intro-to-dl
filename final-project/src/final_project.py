@@ -156,6 +156,21 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
+            epoch_loss += loss
+
+            batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
+
+            epoch_loss += float(loss)
+            train_accuracy += batch_acc
+            train_precision += batch_prec
+            train_recall += batch_rec
+            train_f1 += batch_f1
+            print(batch_number)
+            print("Precision:", 100 * train_precision / batch_number)
+            print("Recall:", 100 * train_recall / batch_number)
+            print("F1:", 100 * train_f1 / batch_number)
+            print("Accuracy:", 100 * train_accuracy / batch_number)
+
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
