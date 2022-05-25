@@ -9,21 +9,7 @@ import model
 from parameters import Parameters
 
 from torchtext.legacy.data import Field
-from utils import get_codes_in_list
-
-tok = spacy.load("en_core_web_sm", disable=["parser", "tagger", "ner", "lemmatizer"])
-
-
-def tokenizer(s):
-    return [w.text.lower() for w in tok(tweet_clean(s))]
-
-
-def tweet_clean(text):
-    """remove non alphanumeric character"""
-    text = re.sub(r"[^A-Za-z0-9]+", " ", text)
-    text = re.sub(r"https?:/\/\S+", " ", text)  # remove links
-    text = re.sub(r"www?:/\/\S+", " ", text)
-    return text.strip()
+from utils import get_codes_in_list, tokenizer, tweet_clean
 
 
 print("starting inference.py")
@@ -45,7 +31,6 @@ model = model.Model(
 print("loading model")
 model.load_state_dict(torch.load(params.get_mode()))
 
-
 model.eval()
 
 print("model loaded")
@@ -58,6 +43,7 @@ id_field = Field(
 txt_field = Field(
     sequential=True, use_vocab=True, include_lengths=True, tokenize=tokenizer
 )
+
 csv_fields = [("Labels", id_field), ("NewsText", txt_field)]
 
 test_data = torchtext.legacy.data.TabularDataset.splits(
@@ -69,7 +55,6 @@ test_data = torchtext.legacy.data.TabularDataset.splits(
 )[0]
 
 print("test data created")
-
 
 txt_field.build_vocab(
     test_data,
@@ -115,6 +100,7 @@ with open(f'{params.get("data_path")}/results.csv', "a", newline="") as file:
     writer = csv.writer(file)
     line = ["NewsId"] + get_codes_in_list(params.get("topic_path"))
     writer.writerow(line)
+
     for batch in train_iter:
 
         seqs, seqs_lens = batch.NewsText

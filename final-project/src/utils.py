@@ -76,5 +76,5 @@ def get_codes_in_list(codes_file):
         for line in f.readlines():
             if line[0] != ";":
                 parts = line.split("\t")
-                codes.append(parts[0].strip())
+                codes.append(f"{parts[0].strip()}, ({parts[1].strip()})")
     return codes
