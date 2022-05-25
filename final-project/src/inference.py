@@ -11,7 +11,6 @@ from parameters import Parameters
 from torchtext.legacy.data import Field
 from utils import get_codes_in_list, tokenizer, tweet_clean
 
-
 print("starting inference.py")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -27,6 +26,7 @@ model = model.Model(
     lstm_hidden_dim=params.get("lstm_hidden_dim"),
     num_classes=params.get("num_classes"),
 )
+
 
 print("loading model")
 model.load_state_dict(torch.load(params.get_mode()))
@@ -55,6 +55,7 @@ test_data = torchtext.legacy.data.TabularDataset.splits(
 )[0]
 
 print("test data created")
+
 
 txt_field.build_vocab(
     test_data,

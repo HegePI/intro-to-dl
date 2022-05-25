@@ -10,8 +10,8 @@
     "lstm_hidden_dim": 200,
     "loss_function": "bce_with_logits_loss",
     "optimizer": "sgd",
-    "data_path": "/home/heikki/koulu/intro-to-dl/final-project/data",
-    "topic_path": "/home/heikki/koulu/intro-to-dl/final-project/topic_codes.txt"
+    "data_path": "/users/pullihei/intro-to-dl/final-project/data",
+    "topic_path": "/users/pullihei/intro-to-dl/final-project/topic_codes.txt"
   },
   "more_epochs_and_bigger_batches": {
     "n_epochs": 20,
@@ -24,8 +24,8 @@
     "lstm_hidden_dim": 200,
     "loss_function": "bce_with_logits_loss",
     "optimizer": "sgd",
-    "data_path": "~/final-project/data",
-    "topic_path": "~/final-project/topic_codes.txt"
+    "data_path": "/users/pullihei/intro-to-dl/final-project/data",
+    "topic_path": "/users/pullihei/intro-to-dl/final-project/topic_codes.txt"
   },
   "adam_optimizer": {
     "n_epochs": 20,
@@ -38,8 +38,8 @@
     "lstm_hidden_dim": 200,
     "loss_function": "bce_with_logits_loss",
     "optimizer": "adam",
-    "data_path": "~/final-project/data",
-    "topic_path": "~/final-project/topic_codes.txt"
+    "data_path": "/users/pullihei/intro-to-dl/final-project/data",
+    "topic_path": "/users/pullihei/intro-to-dl/final-project/topic_codes.txt"
   },
   "rms_prop_optimizer": {
     "n_epochs": 20,
@@ -52,7 +52,7 @@
     "lstm_hidden_dim": 200,
     "loss_function": "bce_with_logits_loss",
     "optimizer": "rms_prop",
-    "data_path": "~/koulu/intro-to-dl/final-project/data",
-    "topic_path": "~/koulu/intro-to-dl/final-project/topic_codes.txt"
+    "data_path": "/users/pullihei/intro-to-dl/final-project/data",
+    "topic_path": "/users/pullihei/intro-to-dl/final-project/topic_codes.txt"
   }
 }
