@@ -151,3 +151,12 @@ if __name__ == "__main__":
         # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
     torch.save(lstm_model, params.get_mode())
+
+    # Inference loop
+    for batch in test_iter:
+
+        seqs, seqs_lens = batch.NewsText
+
+        out = model(seqs, seqs_lens)
+
+        print(out)
