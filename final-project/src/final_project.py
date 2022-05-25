@@ -15,10 +15,17 @@ from utils import epoch_time, evaluate, get_optimizer, idx_to_multi_label_ohe, t
 
 if __name__ == "__main__":
 
+    print("starting final_project.py")
+
+    start = time.time()
+
     params = Parameters()
 
     if len(sys.argv) > 1:
         params.set_mode(sys.argv[1])
+
+    params_time = time.time()
+    print(f"{params_time-start}s, params loaded")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -46,6 +53,9 @@ if __name__ == "__main__":
         skip_header=False,
     )
 
+    dataset_time = time.time()
+    print(f"{dataset_time-start}s, dataset split")
+
     txt_field.build_vocab(
         train_data,
         dev_data,
@@ -55,6 +65,9 @@ if __name__ == "__main__":
     )
 
     label_field.build_vocab(train_data)
+
+    vocabs_time = time.time()
+    print(f"{vocabs_time-start}s, vocabs created")
 
     train_iter, dev_iter, test_iter = torchtext.legacy.data.BucketIterator.splits(
         datasets=(train_data, dev_data, test_data),
@@ -69,6 +82,9 @@ if __name__ == "__main__":
         repeat=False,
     )
 
+    iterators_time = time.time()
+    print(f"{iterators_time-start}s, iterators created")
+
     PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
     UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
@@ -79,8 +95,14 @@ if __name__ == "__main__":
         num_classes=params.get("num_classes"),
     )
 
+    model_time = time.time()
+    print(f"{model_time-start}s, model created")
+
     pretrained_embeddings = txt_field.vocab.vectors
     lstm_model.embedding.weight.data.copy_(pretrained_embeddings)
+
+    embedding_time = time.time()
+    print(f"{embedding_time-start}s, embeddings copied")
 
     # Fix the <UNK> and <PAD> tokens in the embedding layer
     lstm_model.embedding.weight.data[UNK_IDX] = torch.zeros(params.get("embedding_dim"))
@@ -101,8 +123,14 @@ if __name__ == "__main__":
         lr=params.get("learning_rate"),
     )
 
+    optimizer_time = time.time()
+    print(f"{optimizer_time-start}s, optimizer created")
+
     lstm_model = lstm_model.to(device)
     criterion = criterion.to(device)
+
+    training_time = time.time()
+    print(f"{training_time-start}s, starting training")
 
     for epoch in range(params.get("n_epochs")):
         start_time = time.time()
@@ -128,35 +156,15 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss
-
-            batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
-
-            epoch_loss += float(loss)
-            train_accuracy += batch_acc
-            train_precision += batch_prec
-            train_recall += batch_rec
-            train_f1 += batch_f1
-            print(batch_number)
-            print("Precision:", 100 * train_precision / batch_number)
-            print("Recall:", 100 * train_recall / batch_number)
-            print("F1:", 100 * train_f1 / batch_number)
-            print("Accuracy:", 100 * train_accuracy / batch_number)
-
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
         print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
-        # print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
-        # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    torch.save(lstm_model, params.get_mode())
+    training_finished_time = time.time()
+    print(f"{training_time-start}s, training finished")
+    print(f"training took {training_finished_time-training_time}s")
 
-    # Inference loop
-    for batch in test_iter:
-
-        seqs, seqs_lens = batch.NewsText
-
-        out = model(seqs, seqs_lens)
-
-        print(out)
+    torch.save(lstm_model.state_dict(), params.get_mode())
+    end_time = time.time()
+    print(f"{end_time-start}s, model saved")

@@ -68,3 +68,13 @@ def get_optimizer(optimizer, params, lr):
     else:
         print("No optimizer specified in hyperparameters, defaulting to SGD")
         return torch.optim.SGD(params, lr)
+
+
+def get_codes_in_list(codes_file):
+    codes = []
+    with open(codes_file, "r") as f:
+        for line in f.readlines():
+            if line[0] != ";":
+                parts = line.split("\t")
+                codes.append(parts[0].strip())
+    return codes
