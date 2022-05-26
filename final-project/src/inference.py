@@ -21,7 +21,7 @@ if len(sys.argv) > 1:
     params.set_mode(sys.argv[1])
 
 model = model_old.Model(
-    vocab_size=100_002,
+    vocab_size=90_002,
     embedding_dim=params.get("embedding_dim"),
     lstm_hidden_dim=params.get("lstm_hidden_dim"),
     num_classes=params.get("num_classes"),
