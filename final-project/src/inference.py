@@ -111,5 +111,4 @@ with open(f'{params.get("data_path")}/results.csv', "a", newline="") as file:
         out = (out > 0.5).int()
 
         for (id, sample) in zip(ids, out):
-            print(id.item(), sample.tolist())
             writer.writerow([id.item()] + sample.tolist())
