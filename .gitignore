@@ -174,3 +174,8 @@ cython_debug/
 */reuters-training-corpus.zip
 
 **/.vector_cache
+*data/
+*backup/
+adam_optimizer
+base
+*.zip
