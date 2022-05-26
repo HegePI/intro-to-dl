@@ -59,7 +59,7 @@ if __name__ == "__main__":
     txt_field.build_vocab(
         train_data,
         dev_data,
-        max_size=100_000,
+        max_size=90_000,
         vectors=f"glove.6B.{params.get('embedding_dim')}d",
         unk_init=torch.Tensor.normal_,
     )

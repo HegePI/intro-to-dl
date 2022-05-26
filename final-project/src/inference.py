@@ -59,7 +59,7 @@ print("test data created")
 
 txt_field.build_vocab(
     test_data,
-    max_size=100_000,
+    max_size=90_000,
     vectors=f'glove.6B.{params.get("embedding_dim")}d',
     unk_init=torch.Tensor.normal_,
 )
@@ -84,7 +84,6 @@ UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
 
 pretrained_embeddings = txt_field.vocab.vectors
-pretrained_embeddings = torch.nn.functional.pad(pretrained_embeddings, (0, 0, 0, 1403))
 model.embedding.weight.data.copy_(pretrained_embeddings)
 
 # Fix the <UNK> and <PAD> tokens in the embedding layer
