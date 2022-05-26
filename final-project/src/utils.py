@@ -50,7 +50,7 @@ def idx_to_multi_label_ohe(labels, n_classes):
         labels = torch.tensor(labels)
         labels = labels.unsqueeze(0)
         labels = (
-            torch.zeros(labels.size(0), n_classes + 1)
+            torch.zeros(labels.size(0), n_classes)
             .scatter_(1, labels, 1)
             .squeeze(0)
             .tolist()
