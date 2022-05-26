@@ -114,10 +114,12 @@ if __name__ == "__main__":
 
     # BCEWithLogitsLoss, when models last layer is not sigmoid
     # https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss
-    #criterion = torch.nn.BCEWithLogitsLoss(
+    # criterion = torch.nn.BCEWithLogitsLoss(
     #    pos_weight=torch.ones(params.get("num_classes"))
-    #)
-    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=(torch.ones([128]) * 3).to(device))
+    # )
+    criterion = torch.nn.BCEWithLogitsLoss(
+        pos_weight=(torch.ones([params.get("num_classes")]) * 1).to(device)
+    )
     # criterion = torch.nn.BCEWithLogitsLoss()
 
     optimizer = get_optimizer(
@@ -161,7 +163,9 @@ if __name__ == "__main__":
 
             epoch_loss += loss
 
-            batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(targets, out)
+            batch_acc, batch_prec, batch_rec, batch_f1 = evaluate(
+                targets, torch.sigmoid(out)
+            )
 
             epoch_loss += float(loss)
             train_accuracy += batch_acc

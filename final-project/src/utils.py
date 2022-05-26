@@ -3,6 +3,7 @@ import re
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import spacy
 import torch
+import numpy as np
 
 # import spacy.cli
 # spacy.cli.download("en_core_web_sm")
@@ -32,7 +33,10 @@ def epoch_time(start_time, end_time):
 
 def evaluate(target, predicted):
     target = target.detach().cpu().numpy()
+    target = np.nan_to_num(target)
+
     prediction = torch.round(predicted).detach().cpu().numpy()
+    prediction = np.nan_to_num(prediction)
 
     batch_accuracy = accuracy_score(target, prediction)
     batch_precision = precision_score(target, prediction, average="micro")
