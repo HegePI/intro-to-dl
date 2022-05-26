@@ -94,9 +94,9 @@ class XmlToCsvWriter:
                 ),
             )
         )
-        # check if no labels for sample, and set 127 as NONE label
+        # check if no labels for sample, and set 126 as NONE label
         if len(idx) == 0:
-            idx = ["127"]
+            idx = ["126"]
 
         res = " ".join(idx)
 
