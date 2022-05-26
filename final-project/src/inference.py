@@ -4,7 +4,7 @@ import re
 import spacy
 import torch
 import torchtext
-import model
+import model_old
 
 from parameters import Parameters
 
@@ -20,7 +20,7 @@ params = Parameters()
 if len(sys.argv) > 1:
     params.set_mode(sys.argv[1])
 
-model = model.Model(
+model = model_old.Model(
     vocab_size=100_002,
     embedding_dim=params.get("embedding_dim"),
     lstm_hidden_dim=params.get("lstm_hidden_dim"),
